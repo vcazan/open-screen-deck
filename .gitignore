@@ -1,0 +1,33 @@
+# ── internal working notes (kept locally, not published) ──
+AGENTS.md
+docs/MASTER_PLAN.md
+
+# ── OS junk ──
+.DS_Store
+**/.DS_Store
+
+# ── KiCad session/scratch files ──
+hardware/pcb/.history/
+*.lck
+~*.lck
+*.kicad_prl
+*-backups/
+fp-info-cache
+hardware/pcb/*.ses
+hardware/pcb/*.dsn
+hardware/pcb/*drc*.rpt
+hardware/pcb/*drc*.json
+hardware/pcb/drc_report.json
+data_streamdeck-drc.rpt
+
+# ── Python ──
+__pycache__/
+*.pyc
+
+# ── Editors ──
+.vscode/
+.idea/
+
+# ── docs build ──
+site/
+.venv-docs/

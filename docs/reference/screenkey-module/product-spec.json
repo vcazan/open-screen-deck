@@ -1,0 +1,65 @@
+{
+  "product": "Waveshare 0.85inch ScreenKey Module B",
+  "sku": "34168",
+  "part_number": "0.85inch ScreenKey Module B",
+  "url": "https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168",
+  "wiki": "https://docs.waveshare.com/0.85inch-ScreenKey-Module-W",
+  "display": {
+    "size_inch": 0.85,
+    "resolution": [128, 128],
+    "colors": "65K",
+    "driver_ic": "ST7735",
+    "interface": "4-wire SPI",
+    "panel": "IPS",
+    "visible_area_mm": [15.21, 15.21],
+    "pixel_pitch_um": [118.8, 118.8]
+  },
+  "electrical": {
+    "voltage_v": 3.3,
+    "notes": "Docs also list 5V tolerance; Open Screen Deck uses 3.3V only"
+  },
+  "switch": {
+    "actuation_force_gf": "50 ± 10",
+    "bottom_out_force_gf": "55 ± 10",
+    "actuation_travel_mm": "1.20 ± 0.30",
+    "total_travel_mm": "2.80 ± 0.25",
+    "spring_length_mm": 15.5,
+    "lifespan_cycles": 50000000
+  },
+  "mechanical_mm": {
+    "source": "outline-dimensions.png + Waveshare product page",
+    "mount_hole_centers": [22.0, 25.3],
+    "pcb_back": [25.94, 35.29],
+    "total_stack_height": 24.0,
+    "keycap_depth": 8.6,
+    "mounting_holes": 4
+  },
+  "connector": {
+    "pins": 9,
+    "pitch_mm": 1.25,
+    "cable_in_box": "MX1.25 9PIN 200mm",
+    "pinout_spi_module": {
+      "1": "KEY",
+      "2": "DC",
+      "3": "CS",
+      "4": "SCLK",
+      "5": "DIN",
+      "6": "GND",
+      "7": "VCC",
+      "8": "PWM",
+      "9": "RST"
+    }
+  },
+  "package_contents": [
+    "0.85inch ScreenKey Module B host x1",
+    "MX1.25 9PIN 200mm cable x1"
+  ],
+  "weight_kg": 0.017,
+  "open_screen_deck_notes": {
+    "cad_status": "Aligned — enclosure v4, pcb brief, mechanical_contract updated 2026-07-03",
+    "enclosure_outer_mm": [59.9, 116.9],
+    "carrier_pcb_mm": [55, 112],
+    "split_z_mm": 18,
+    "face_angle_deg": 29
+  }
+}

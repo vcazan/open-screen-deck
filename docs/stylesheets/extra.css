@@ -1,0 +1,58 @@
+/* Brand accent — amber on slate */
+[data-md-color-scheme="slate"] {
+  --md-accent-fg-color: #f5b82e;
+  --md-accent-fg-color--transparent: #f5b82e1a;
+  --md-primary-fg-color: #121212;
+  --md-primary-fg-color--light: #1e1e1e;
+  --md-primary-fg-color--dark: #0a0a0a;
+}
+
+[data-md-color-scheme="default"] {
+  --md-accent-fg-color: #d99a1a;
+  --md-accent-fg-color--transparent: #d99a1a1a;
+  --md-primary-fg-color: #121212;
+  --md-primary-fg-color--light: #2a2a2a;
+  --md-primary-fg-color--dark: #0a0a0a;
+}
+
+/* Hero image on landing page */
+.hero-image {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  margin-bottom: 1.5rem;
+  max-width: 100%;
+}
+
+/* Grid card hover lift */
+.grid.cards > ul > li {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grid.cards > ul > li:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+/* Heading letter-spacing */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Table headers */
+.md-typeset table:not([class]) th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+/* Rounded images with border */
+.md-content img:not(.hero-image) {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+}

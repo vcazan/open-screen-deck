@@ -1,0 +1,40 @@
+# Parts List
+
+Complete shopping list for building one Open Screen Deck. Source CSV:
+[`hardware/bom_assembly.csv`](https://github.com/vcazan/open-screen-deck/blob/main/hardware/bom_assembly.csv)
+
+## Bill of materials
+
+| Item | Qty | Exact spec | Where to buy | Est. cost (USD) | Notes |
+|------|-----|------------|--------------|-----------------|-------|
+| ScreenKey module | 6 | Waveshare 0.85inch ScreenKey Module B (SKU 34168) | [waveshare.com](https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168) | ~$66 ($11 ea) | Includes the cable and brass standoffs. Buy Module B (black cap + switch + PCB) |
+| Carrier PCB | 1 | 55 × 112 mm 2-layer; files in `hardware/pcb/gerbers` | [JLCPCB](https://jlcpcb.com) / PCBWay | ~$15 for 5 boards | Upload `data_streamdeck_gerbers.zip`. Assembly service optional; parts list in `hardware/pcb/bom.csv` |
+| Printed: bottom tray | 1 | `hardware/enclosure/stl/deck_bottom_v11.stl` | Your 3D printer | ~$1 filament | PETG or PLA+; flat on bed; no supports |
+| Printed: top shell | 1 | `hardware/enclosure/stl/deck_top_v11.stl` | Your 3D printer | ~$1 filament | Face-down; no supports |
+| Printed: corner spacers | 4 | `hardware/enclosure/stl/corner_spacers_x4_v11.stl` | Your 3D printer | pennies | 100% infill; replaces the factory standoff at the 4 deck corners |
+| Printed: desk stand | 1 | `hardware/enclosure/stl/deck_stand_v11.stl` | Your 3D printer | ~$1 filament | Optional 25° stand |
+| Heat-set insert M2 | 4 | Ruthex RX-M2x4 brass (3.2 mm install hole) | Amazon "ruthex M2" | ~$8 per 50-pack | Goes into the top shell face plate |
+| Screw M2×25 countersunk | 4 | M2 × 25 mm flat head countersunk DIN 965 (Phillips) or ISO 14581 (Torx) A2 | Amazon / AliExpress "M2×25 DIN 965" | ~$6 assorted box | The 4 case screws. Heads sink into the foot recesses and are hidden by the rubber feet |
+| Screw M2×5 | 12 | M2 × 5 mm hex socket cap ISO 4762 / DIN 912 A2 | Same assorted box as above | included | Fixes modules to the carrier from below |
+| Rubber feet | 8 | 10 mm dia × 2 mm self-adhesive | Amazon | ~$5 per sheet | 4 on the deck + 4 on the stand |
+| microSD card | 1 | 8–32 GB; FAT32 | Anywhere | ~$5 | Optional — on-device icons and animations |
+| USB-C cable | 1 | USB 2.0 data cable | You own one | — | Deck to computer |
+
+!!! info "Estimated total"
+    About **$100 in parts** — $66 of which is the six key modules. PCB fab runs
+    ~$15 for five boards; fasteners and printed parts add the rest. You likely
+    already own a USB-C cable.
+
+## What to order first
+
+- [ ] **6× Waveshare 34168** — longest lead time; order these first from
+      [Waveshare](https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168)
+- [ ] **Carrier PCB** — upload `hardware/pcb/data_streamdeck_gerbers.zip` to
+      [JLCPCB](https://jlcpcb.com) (~$15 for five boards)
+- [ ] **M2 fasteners** — one assorted box covers M2×5 module screws and M2×25
+      case screws
+- [ ] **4× Ruthex RX-M2x4** heat-set inserts for the top shell
+- [ ] **8× rubber feet** (10 mm dia × 2 mm)
+- [ ] **Print the four STLs** while waiting on PCB and modules — see
+      [3D Printing](printing.md)
+- [ ] **microSD card** (optional) — 8–32 GB FAT32 for on-device icons

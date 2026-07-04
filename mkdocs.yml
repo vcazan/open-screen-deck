@@ -1,0 +1,122 @@
+site_name: Open Screen Deck
+site_url: https://vcazan.github.io/open-screen-deck/
+repo_url: https://github.com/vcazan/open-screen-deck
+repo_name: vcazan/open-screen-deck
+docs_dir: docs
+
+validation:
+  links:
+    not_found: ignore
+    unrecognized_links: ignore
+
+theme:
+  name: material
+  custom_dir: overrides
+  palette:
+    - scheme: slate
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Space Grotesk
+    code: IBM Plex Mono
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+  favicon: images/hero.png
+
+plugins:
+  - search
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      zoomable: true
+      draggable: true
+      auto_caption: false
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.keys
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  discord: https://discord.gg/PVCzBBeGQX
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/vcazan/open-screen-deck
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/PVCzBBeGQX
+      name: Discord
+
+not_in_nav: |
+  assembly.md
+  protocol.md
+  mechanical_contract.md
+  pcb_design_brief.md
+  product_architecture.md
+  fab_checklist.md
+  MASTER_PLAN.md
+  reference/**
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Parts List: getting-started/parts.md
+    - 3D Printing: getting-started/printing.md
+  - Build:
+    - Assembly Guide: build/assembly.md
+    - Fab Checklist: build/fab-checklist.md
+  - Firmware:
+    - Flashing: firmware/flashing.md
+    - Serial Protocol: firmware/protocol.md
+  - Hardware:
+    - Overview: hardware/overview.md
+    - Mechanical: hardware/mechanical.md
+    - PCB Design: hardware/pcb.md
+    - ScreenKey Module: hardware/screenkey-module.md
+    - Architecture: hardware/architecture.md
+  - About:
+    - License: about/license.md
+    - Related Projects: about/related.md
