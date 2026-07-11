@@ -1,5 +1,11 @@
 import { rgb565ToRgb888, rgb888ToRgb565 } from '../protocol/rgb565';
-import { HID_F_KEYS, HID_PAGE_BASE, HID_PAGE_NEXT, MAX_PAGES } from '../protocol/constants';
+import {
+  HID_F_KEYS,
+  HID_PAGE_BASE,
+  HID_PAGE_NEXT,
+  HID_PAGE_PREV,
+  MAX_PAGES,
+} from '../protocol/constants';
 import {
   ACTION_TYPE_META,
   DEFAULT_MIC_FACES,
@@ -18,9 +24,12 @@ import { HotkeyInput } from './components/HotkeyInput';
 import { Input } from './components/Input';
 
 interface ActionEditorProps {
-  action: KeyAction;
+  /** null = unbound (only valid with allowNone, for double/triple slots) */
+  action: KeyAction | null;
+  /** Offer a "None" choice — unbound multi-tap slots keep keys latency-free */
+  allowNone?: boolean;
   hidFallback: number;
-  onChange: (action: KeyAction) => void;
+  onChange: (action: KeyAction | null) => void;
   onHidChange: (code: number) => void;
   /** Apply an app's icon (PNG data URL) as the key image. */
   onUseAppIcon?: (dataUrl: string, appName: string) => void;
@@ -35,6 +44,7 @@ const EDITOR_TYPES: KeyActionType[] = [
   'mic_mute',
   'obs_scene',
   'page_next',
+  'page_prev',
   'page',
   'tile',
   'multi',
@@ -119,19 +129,24 @@ function withMacroParam(step: KeyAction, value: string): KeyAction {
 
 export function ActionEditor({
   action,
+  allowNone = false,
   hidFallback,
   onChange,
   onHidChange,
   onUseAppIcon,
 }: ActionEditorProps) {
-  const meta = ACTION_TYPE_META[action.type];
-  const companionMissing = meta.needsCompanion && !isTauri();
+  const meta = action ? ACTION_TYPE_META[action.type] : null;
+  const companionMissing = (meta?.needsCompanion ?? false) && !isTauri();
 
   // Plugin-contributed action types join the picker live
   const [pluginActions, setPluginActions] = useState(pluginHost.list());
   useEffect(() => pluginHost.onChange(() => setPluginActions(pluginHost.list())), []);
 
   const changeType = (value: string) => {
+    if (value === 'none') {
+      onChange(null);
+      return;
+    }
     if (value.startsWith('plugin:')) {
       onChange({ type: 'plugin', plugin: value.slice(7), settings: {} });
       return;
@@ -141,12 +156,17 @@ export function ActionEditor({
     // Page actions ride on reserved HID codes so the FIRMWARE performs the
     // switch — the key works even with the companion app closed.
     if (type === 'page_next') onHidChange(HID_PAGE_NEXT);
+    else if (type === 'page_prev') onHidChange(HID_PAGE_PREV);
     else if (type === 'page') onHidChange(HID_PAGE_BASE);
   };
 
-  const selectValue =
-    action.type === 'plugin' && action.plugin ? `plugin:${action.plugin}` : action.type;
-  const pluginSpec = action.type === 'plugin' ? pluginHost.get(action.plugin) : undefined;
+  const selectValue = !action
+    ? 'none'
+    : action.type === 'plugin' && action.plugin
+      ? `plugin:${action.plugin}`
+      : action.type;
+  const pluginSpec =
+    action?.type === 'plugin' ? pluginHost.get(action.plugin) : undefined;
 
   return (
     <div className="action-editor">
@@ -156,6 +176,7 @@ export function ActionEditor({
         onChange={(e) => changeType(e.target.value)}
         aria-label="Action type"
       >
+        {allowNone && <option value="none">None — key stays instant</option>}
         {EDITOR_TYPES.filter((t) => t !== 'plugin').map((t) => (
           <option key={t} value={t}>
             {ACTION_TYPE_META[t].label}
@@ -170,18 +191,24 @@ export function ActionEditor({
             ))}
           </optgroup>
         )}
-        {action.type === 'plugin' && !pluginSpec && (
+        {action?.type === 'plugin' && !pluginSpec && (
           <option value={selectValue}>{action.plugin} (not installed)</option>
         )}
       </select>
 
-      <p className={`action-hint ${companionMissing ? 'warn' : ''}`}>
-        {companionMissing
-          ? 'Needs the desktop companion app — in the browser this action only dry-runs.'
-          : meta.hint}
-      </p>
+      {action === null ? (
+        <p className="action-hint">
+          Unbound — single presses on this key fire instantly, with no tap-window delay.
+        </p>
+      ) : (
+        <p className={`action-hint ${companionMissing ? 'warn' : ''}`}>
+          {companionMissing
+            ? 'Needs the desktop companion app — in the browser this action only dry-runs.'
+            : meta?.hint}
+        </p>
+      )}
 
-      {action.type === 'hid' && (
+      {action?.type === 'hid' && (
         <div className="hid-grid">
           {HID_F_KEYS.map((k) => (
             <button
@@ -199,7 +226,7 @@ export function ActionEditor({
         </div>
       )}
 
-      {action.type === 'hotkey' && (
+      {action?.type === 'hotkey' && (
         <div className="field">
           <span className="field-label">Hotkey chord</span>
           <HotkeyInput
@@ -209,7 +236,7 @@ export function ActionEditor({
         </div>
       )}
 
-      {action.type === 'launch' &&
+      {action?.type === 'launch' &&
         (isTauri() ? (
           <div className="field">
             <span className="field-label">Application</span>
@@ -234,7 +261,7 @@ export function ActionEditor({
           />
         ))}
 
-      {action.type === 'open_url' && (
+      {action?.type === 'open_url' && (
         <Input
           label="URL"
           placeholder="https://…"
@@ -243,7 +270,7 @@ export function ActionEditor({
         />
       )}
 
-      {action.type === 'plugin' && pluginSpec && (
+      {action?.type === 'plugin' && pluginSpec && (
         <div className="field">
           {pluginSpec.hint && <span className="action-hint">{pluginSpec.hint}</span>}
           {pluginSpec.fields.map((f) => (
@@ -263,7 +290,7 @@ export function ActionEditor({
         </div>
       )}
 
-      {action.type === 'tile' && (
+      {action?.type === 'tile' && (
         <div className="field">
           <span className="field-label">Tile</span>
           <select
@@ -282,7 +309,7 @@ export function ActionEditor({
         </div>
       )}
 
-      {action.type === 'page' && (
+      {action?.type === 'page' && (
         <div className="field">
           <span className="field-label">Target page</span>
           <div className="hid-grid">
@@ -303,7 +330,7 @@ export function ActionEditor({
         </div>
       )}
 
-      {action.type === 'shell' && (
+      {action?.type === 'shell' && (
         <Input
           label="Command"
           placeholder="say 'hello'"
@@ -312,7 +339,7 @@ export function ActionEditor({
         />
       )}
 
-      {action.type === 'mic_mute' && (
+      {action?.type === 'mic_mute' && (
         <div className="face-editor-stack">
           <FaceEditor
             title="Mic live"
@@ -337,7 +364,7 @@ export function ActionEditor({
         </div>
       )}
 
-      {action.type === 'obs_scene' && (
+      {action?.type === 'obs_scene' && (
         <Input
           label="Scene name"
           placeholder="Exactly as named in OBS"
@@ -346,7 +373,7 @@ export function ActionEditor({
         />
       )}
 
-      {action.type === 'multi' && (
+      {action?.type === 'multi' && (
         <div className="macro-editor">
           {action.steps.map((step, i) => (
             <div key={i} className="macro-step">

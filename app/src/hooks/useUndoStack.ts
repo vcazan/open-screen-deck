@@ -15,6 +15,7 @@ import {
   takeDeckSnapshot,
   type DeckOps,
   type DeckSnapshot,
+  type MultiActions,
 } from '../utils/deckSnapshot';
 
 const MAX_DEPTH = 50;
@@ -23,6 +24,7 @@ const COALESCE_MS = 1200;
 export function useUndoStack(
   device: SimulatedDevice | null,
   actionsRef: React.MutableRefObject<KeyAction[]>,
+  multiRef: React.MutableRefObject<MultiActions>,
   ops: DeckOps,
 ) {
   const undoRef = useRef<DeckSnapshot[]>([]);
@@ -45,12 +47,12 @@ export function useUndoStack(
         return;
       }
       lastCheckpointAt.current = now;
-      undoRef.current.push(takeDeckSnapshot(device, actionsRef.current));
+      undoRef.current.push(takeDeckSnapshot(device, actionsRef.current, multiRef.current));
       if (undoRef.current.length > MAX_DEPTH) undoRef.current.shift();
       redoRef.current = []; // new timeline
       publish();
     },
-    [device, actionsRef, publish],
+    [device, actionsRef, multiRef, publish],
   );
 
   const undo = useCallback(async () => {
@@ -59,14 +61,14 @@ export function useUndoStack(
     if (!target) return;
     applyingRef.current = true;
     try {
-      const current = takeDeckSnapshot(device, actionsRef.current);
+      const current = takeDeckSnapshot(device, actionsRef.current, multiRef.current);
       redoRef.current.push(current);
       await applyDeckSnapshot(target, current, ops);
     } finally {
       applyingRef.current = false;
       publish();
     }
-  }, [device, actionsRef, ops, publish]);
+  }, [device, actionsRef, multiRef, ops, publish]);
 
   const redo = useCallback(async () => {
     if (!device || applyingRef.current) return;
@@ -74,14 +76,14 @@ export function useUndoStack(
     if (!target) return;
     applyingRef.current = true;
     try {
-      const current = takeDeckSnapshot(device, actionsRef.current);
+      const current = takeDeckSnapshot(device, actionsRef.current, multiRef.current);
       undoRef.current.push(current);
       await applyDeckSnapshot(target, current, ops);
     } finally {
       applyingRef.current = false;
       publish();
     }
-  }, [device, actionsRef, ops, publish]);
+  }, [device, actionsRef, multiRef, ops, publish]);
 
   return { checkpoint, undo, redo, canUndo: depths.undo > 0, canRedo: depths.redo > 0 };
 }

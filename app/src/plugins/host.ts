@@ -34,6 +34,19 @@ export interface PluginContext {
     slot: number,
     face: { label?: string; sublabel?: string; bg?: number },
   ) => void;
+  /** Run a shell command on the host (dry-runs in the browser build). */
+  shell: (command: string) => Promise<void>;
+  /** Press a hotkey chord like "cmd+shift+a" on the host. */
+  hotkey: (keys: string) => Promise<void>;
+  /**
+   * HTTP through the Rust backend — use this instead of window.fetch for
+   * plain-http and CORS-less targets (Hue bridges, local webhooks, LAN
+   * devices), which the webview refuses to reach.
+   */
+  fetch: (
+    url: string,
+    init?: { method?: string; headers?: Record<string, string>; body?: string },
+  ) => Promise<{ status: number; ok: boolean; body: string; json: () => unknown }>;
   /** The key slot that fired the action */
   slot: number;
 }
@@ -80,12 +93,48 @@ export function setRegistryUrl(url: string): void {
   else localStorage.removeItem(REGISTRY_URL_KEY);
 }
 
+async function runHostAction(action: Record<string, unknown>, log: (m: string) => void) {
+  if (!isTauri()) {
+    log(`(dry-run, needs the desktop app): ${JSON.stringify(action)}`);
+    return;
+  }
+  const { invoke } = await import('@tauri-apps/api/core');
+  await invoke('execute_action', { action });
+}
+
+async function pluginFetch(
+  url: string,
+  init?: { method?: string; headers?: Record<string, string>; body?: string },
+): Promise<{ status: number; ok: boolean; body: string; json: () => unknown }> {
+  if (!isTauri()) {
+    // Browser build: plain window.fetch (subject to normal CORS rules)
+    const res = await fetch(url, init);
+    const body = await res.text();
+    return { status: res.status, ok: res.ok, body, json: () => JSON.parse(body) };
+  }
+  const { invoke } = await import('@tauri-apps/api/core');
+  const result = (await invoke('plugin_http', {
+    method: init?.method ?? 'GET',
+    url,
+    headers: init?.headers ?? null,
+    body: init?.body ?? null,
+  })) as { status: number; body: string };
+  return {
+    status: result.status,
+    ok: result.status >= 200 && result.status < 300,
+    body: result.body,
+    json: () => JSON.parse(result.body),
+  };
+}
+
 class PluginHost {
   private actions = new Map<string, RegisteredPluginAction>();
   private listeners = new Set<() => void>();
   private bridge: HostBridge = { log: () => {}, setKeyFace: () => {} };
   private loaded = false;
   private installed: InstalledPlugin[] = [];
+  /** Cleanup callbacks per plugin — run on reload/uninstall (timers, audio) */
+  private disposers = new Map<string, (() => void)[]>();
 
   /** Wire the host to the live app (protocol + console). */
   connect(bridge: HostBridge): void {
@@ -115,10 +164,14 @@ class PluginHost {
       this.bridge.log(`plugin action ${id} is not installed`);
       return;
     }
+    const log = (m: string) => this.bridge.log(`[${action.pluginId}] ${m}`);
     try {
       await action.execute(settings, {
-        log: (m) => this.bridge.log(`[${action.pluginId}] ${m}`),
-        setKeyFace: this.bridge.setKeyFace,
+        log,
+        setKeyFace: (s, face) => this.bridge.setKeyFace(s, face),
+        shell: (command) => runHostAction({ type: 'shell', command }, log),
+        hotkey: (keys) => runHostAction({ type: 'hotkey', keys }, log),
+        fetch: pluginFetch,
         slot,
       });
     } catch (err) {
@@ -157,6 +210,17 @@ class PluginHost {
 
   /** Hot reload: drop everything and re-import from disk (dev loop). */
   async reload(): Promise<void> {
+    // Give live plugins (clocks, tickers, audio) a chance to shut down
+    for (const [id, cbs] of this.disposers) {
+      cbs.forEach((cb) => {
+        try {
+          cb();
+        } catch (err) {
+          this.bridge.log(`plugin ${id}: dispose failed — ${String(err)}`);
+        }
+      });
+    }
+    this.disposers.clear();
     this.actions.clear();
     this.installed = [];
     this.loaded = false;
@@ -218,6 +282,11 @@ class PluginHost {
           const id = `${pluginId}:${spec.type}`;
           this.actions.set(id, { ...spec, id, pluginId, pluginName });
           this.listeners.forEach((cb) => cb());
+        },
+        onDispose: (cb: () => void) => {
+          const list = this.disposers.get(pluginId) ?? [];
+          list.push(cb);
+          this.disposers.set(pluginId, list);
         },
         log: (m: string) => this.bridge.log(`[${pluginId}] ${m}`),
       });

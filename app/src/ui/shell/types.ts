@@ -1,6 +1,13 @@
-export type AppView = 'deck' | 'profiles' | 'storage' | 'console' | 'settings';
+export type AppView = 'deck' | 'profiles' | 'plugins' | 'storage' | 'console' | 'settings';
 
-export const VIEW_ORDER: AppView[] = ['deck', 'profiles', 'storage', 'console', 'settings'];
+export const VIEW_ORDER: AppView[] = [
+  'deck',
+  'profiles',
+  'plugins',
+  'storage',
+  'console',
+  'settings',
+];
 
 export const VIEW_META: Record<
   AppView,
@@ -15,6 +22,11 @@ export const VIEW_META: Record<
     title: 'Profiles',
     subtitle: 'Saved key layouts and bindings',
     navLabel: 'Profiles',
+  },
+  plugins: {
+    title: 'Plugins',
+    subtitle: 'Install new action types, or build your own',
+    navLabel: 'Plugins',
   },
   storage: {
     title: 'SD Card',

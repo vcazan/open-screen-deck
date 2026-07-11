@@ -29,7 +29,7 @@ test.describe('actions and deck modes', () => {
     await page.locator('.action-editor .field-input').first().fill('https://example.com');
     await page.waitForTimeout(600);
     const actions = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('osd-key-actions-v1') ?? '[]'),
+      JSON.parse(localStorage.getItem('osd-key-actions-v2') ?? '{}').single ?? [],
     );
     expect(actions[0].type).toBe('open_url');
     expect(actions[0].url).toBe('https://example.com');
@@ -54,7 +54,7 @@ test.describe('actions and deck modes', () => {
     await page.keyboard.press('Meta+Shift+KeyM');
     await page.waitForTimeout(300);
     const actions = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('osd-key-actions-v1') ?? '[]'),
+      JSON.parse(localStorage.getItem('osd-key-actions-v2') ?? '{}').single ?? [],
     );
     expect(actions[2].type).toBe('hotkey');
     // chord is a "+"-joined string, e.g. "cmd+shift+m"

@@ -22,8 +22,10 @@ export function buildProfile(
   }[],
   actions?: KeyAction[],
   pages = 1,
+  multi?: { double: (KeyAction | null)[]; triple: (KeyAction | null)[] },
 ): ProfileData {
   const slots = Math.max(1, Math.min(MAX_PAGES, pages)) * KEY_COUNT;
+  const hasAny = (list?: (KeyAction | null)[]) => list?.some((a) => a !== null) ?? false;
   return {
     version: 4,
     keys: keys.slice(0, slots).map((k) => ({
@@ -35,6 +37,21 @@ export function buildProfile(
       icon: k.icon,
     })),
     actions: actions?.slice(0, slots),
+    actionsDouble: hasAny(multi?.double) ? multi!.double.slice(0, slots) : undefined,
+    actionsTriple: hasAny(multi?.triple) ? multi!.triple.slice(0, slots) : undefined,
+  };
+}
+
+/** Double/triple actions from a profile, padded to the slot ceiling. */
+export function profileToMultiActions(profile: ProfileData): {
+  double: (KeyAction | null)[];
+  triple: (KeyAction | null)[];
+} {
+  const pad = (list?: unknown[]): (KeyAction | null)[] =>
+    Array.from({ length: TOTAL_KEYS }, (_, s) => (list?.[s] as KeyAction) ?? null);
+  return {
+    double: pad(profile.actionsDouble),
+    triple: pad(profile.actionsTriple),
   };
 }
 

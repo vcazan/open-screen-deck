@@ -156,6 +156,27 @@ export function Sidebar({
     );
   }
 
+  if (activeView === 'plugins') {
+    return (
+      <aside className="sidebar">
+        <div>
+          <SectionTitle>PLUGINS</SectionTitle>
+          <p className="sidebar-note">
+            Plugins contribute new action types to your keys — install from the store, or
+            scaffold your own in the Developer section and iterate with hot reload.
+          </p>
+        </div>
+        <div>
+          <SectionTitle>PUBLISH</SectionTitle>
+          <p className="sidebar-note">
+            PR a plugin folder plus a registry entry into the GitHub repo and it appears in
+            everyone's store on refresh.
+          </p>
+        </div>
+      </aside>
+    );
+  }
+
   if (activeView === 'settings') {
     return (
       <aside className="sidebar">

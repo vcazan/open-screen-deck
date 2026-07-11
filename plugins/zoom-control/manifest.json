@@ -1,0 +1,7 @@
+{
+  "id": "zoom-control",
+  "name": "Zoom Control",
+  "version": "1.0.0",
+  "description": "Mute, video, and hand-raise for Zoom meetings — works without focusing Zoom.",
+  "main": "main.js"
+}

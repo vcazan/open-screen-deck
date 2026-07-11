@@ -17,9 +17,17 @@ export interface KeySnapshot {
   icon?: string;
   overlay: boolean;
   action: KeyAction | null;
+  /** Double / triple press actions (null = unbound) */
+  action2: KeyAction | null;
+  action3: KeyAction | null;
   /** Raw RGB565 icon — shared refs are fine, the mirror copies on write */
   image: Uint8Array | null;
   anim: { fps: number; frames: Uint8Array[] } | null;
+}
+
+export interface MultiActions {
+  double: (KeyAction | null)[];
+  triple: (KeyAction | null)[];
 }
 
 export interface DeckSnapshot {
@@ -33,12 +41,17 @@ export interface DeckOps {
   sendSetImage: (index: number, rgb565: Uint8Array) => Promise<void>;
   sendAnimation: (index: number, frames: Uint8Array[], fps: number) => Promise<void>;
   deleteSdPath: (path: string) => Promise<void>;
-  setAllActions: (actions: KeyAction[]) => void;
+  setAllActions: (
+    single: KeyAction[],
+    double: (KeyAction | null)[],
+    triple: (KeyAction | null)[],
+  ) => void;
 }
 
 export function takeDeckSnapshot(
   device: SimulatedDevice,
   actions: KeyAction[],
+  multi: MultiActions,
 ): DeckSnapshot {
   const state = device.getState();
   const media = device.getMediaSnapshot();
@@ -54,6 +67,8 @@ export function takeDeckSnapshot(
         icon: k?.icon,
         overlay: k?.overlay === true,
         action: actions[i] ?? null,
+        action2: multi.double[i] ?? null,
+        action3: multi.triple[i] ?? null,
         image: media.icons[i] ?? null,
         anim: media.animations[i] ?? null,
       };
@@ -146,18 +161,21 @@ export async function applyDeckSnapshot(
 
   ops.setAllActions(
     target.keys.map((k, i) => k.action ?? current.keys[i]?.action ?? { type: 'hid', code: 240 }),
+    target.keys.map((k) => k.action2),
+    target.keys.map((k) => k.action3),
   );
 }
 
-/** Swap the full identity of two key slots (config + action + media). */
+/** Swap the full identity of two key slots (config + actions + media). */
 export async function swapKeySlots(
   a: number,
   b: number,
   device: SimulatedDevice,
   actions: KeyAction[],
+  multi: MultiActions,
   ops: DeckOps,
 ): Promise<void> {
-  const snap = takeDeckSnapshot(device, actions);
+  const snap = takeDeckSnapshot(device, actions, multi);
   const target: DeckSnapshot = { ...snap, keys: snap.keys.slice() };
   target.keys[a] = snap.keys[b];
   target.keys[b] = snap.keys[a];
@@ -170,9 +188,10 @@ export async function pasteKeySlot(
   dest: number,
   device: SimulatedDevice,
   actions: KeyAction[],
+  multi: MultiActions,
   ops: DeckOps,
 ): Promise<void> {
-  const snap = takeDeckSnapshot(device, actions);
+  const snap = takeDeckSnapshot(device, actions, multi);
   const target: DeckSnapshot = { ...snap, keys: snap.keys.slice() };
   target.keys[dest] = source;
   await applyDeckSnapshot(target, snap, ops);

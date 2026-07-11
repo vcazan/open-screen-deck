@@ -1,0 +1,7 @@
+{
+  "id": "web-request",
+  "name": "Web Request",
+  "version": "1.0.0",
+  "description": "Fire any HTTP request from a key — webhooks, REST APIs, IFTTT, n8n.",
+  "main": "main.js"
+}

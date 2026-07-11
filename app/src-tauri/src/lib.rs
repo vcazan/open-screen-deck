@@ -86,6 +86,7 @@ pub fn run() {
             plugins::plugins_dir,
             plugins::plugin_write_files,
             plugins::plugin_fetch_registry,
+            plugins::plugin_http,
             plugins::plugin_install,
             plugins::plugin_uninstall,
             plugins::plugins_open_dir,

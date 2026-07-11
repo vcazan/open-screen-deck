@@ -55,14 +55,34 @@ test.describe('dynamic multi-page decks', () => {
     expect(nvs[6].label).toBe('PAGE2KEY'); // slot 6 = page 2, position 1
   });
 
-  test('removing a page resets its keys — re-adding starts fresh', async ({ page }) => {
+  test('pristine pages remove silently, no confirm', async ({ page }) => {
+    await addPageBtn(page).click();
+    await page.waitForTimeout(500);
+    await removePageBtn(page).click();
+    await page.waitForTimeout(600);
+    await expect(page.locator('.page-confirm')).toHaveCount(0);
+    await expect(pageTabs(page)).toHaveCount(1);
+  });
+
+  test('removing a page with content asks for confirmation first', async ({ page }) => {
     await addPageBtn(page).click();
     await page.waitForTimeout(500);
     await selectKey(page, 0);
     await page.locator('.field-input').first().fill('DOOMED');
     await page.waitForTimeout(900);
     await page.keyboard.press('Escape');
+
+    // cancel keeps the page
     await removePageBtn(page).click();
+    await expect(page.locator('.page-confirm')).toBeVisible();
+    await expect(page.locator('.page-confirm')).toContainText('will be deleted');
+    await page.locator('.page-confirm-cancel').click();
+    await expect(page.locator('.page-confirm')).toHaveCount(0);
+    await expect(pageTabs(page)).toHaveCount(2);
+
+    // confirming removes it and resets its keys
+    await removePageBtn(page).click();
+    await page.locator('.page-confirm-remove').click();
     await page.waitForTimeout(600);
     await expect(pageTabs(page)).toHaveCount(1);
     // re-add: the page comes back with defaults, not "DOOMED"
@@ -74,17 +94,53 @@ test.describe('dynamic multi-page decks', () => {
     expect(nvs[6].label).toBe('KEY 1');
   });
 
-  test('a page-next key cycles pages in test mode', async ({ page }) => {
+  test('cmd+z restores a removed page with its keys', async ({ page }) => {
+    await addPageBtn(page).click();
+    await page.waitForTimeout(500);
+    await selectKey(page, 0);
+    await page.locator('.field-input').first().fill('PRECIOUS');
+    await page.waitForTimeout(1600); // past the undo coalesce window
+    await page.keyboard.press('Escape');
+    await removePageBtn(page).click();
+    await page.locator('.page-confirm-remove').click();
+    await page.waitForTimeout(800);
+    await expect(pageTabs(page)).toHaveCount(1);
+
+    await page.keyboard.press('Meta+z');
+    await page.waitForTimeout(1200);
+    await expect(pageTabs(page)).toHaveCount(2);
+    const nvs = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('osd-simulator-nvs-v2') ?? '[]'),
+    );
+    expect(nvs[6].label).toBe('PRECIOUS');
+  });
+
+  test('page-next and page-prev keys cycle pages in test mode', async ({ page }) => {
     await addPageBtn(page).click();
     await page.waitForTimeout(500);
     await pageTabs(page).nth(0).click();
     await page.waitForTimeout(400);
     await selectKey(page, 5);
     await page.locator('.action-type-select').first().selectOption('page_next');
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(400);
     await page.keyboard.press('Escape');
+    await selectKey(page, 4);
+    await page.locator('.action-type-select').first().selectOption('page_prev');
+    await page.waitForTimeout(400);
+    await page.keyboard.press('Escape');
+
     await page.locator('.deck-mode-btn', { hasText: 'Test' }).click();
-    await page.locator('.key-cap').nth(5).click();
+    await page.locator('.key-cap').nth(5).click(); // next → page 2
+    await page.waitForTimeout(700);
+    await expect(pageTabs(page).nth(1)).toHaveClass(/active/);
+    // page 2's key 5 is a default key; go back with prev via wrap-around:
+    // next again wraps to page 1, where key 5 is the prev key
+    await page.locator('.key-cap').nth(4).click(); // page 2 default key — no switch
+    await page.waitForTimeout(400);
+    await expect(pageTabs(page).nth(1)).toHaveClass(/active/);
+    await pageTabs(page).nth(0).click();
+    await page.waitForTimeout(400);
+    await page.locator('.key-cap').nth(4).click(); // prev → wraps to page 2
     await page.waitForTimeout(700);
     await expect(pageTabs(page).nth(1)).toHaveClass(/active/);
   });
@@ -101,7 +157,7 @@ test.describe('dynamic multi-page decks', () => {
     await page.locator('.action-type-select').first().selectOption('shell');
     await page.waitForTimeout(600);
     const actions = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('osd-key-actions-v1') ?? '[]'),
+      JSON.parse(localStorage.getItem('osd-key-actions-v2') ?? '{}').single ?? [],
     );
     expect(actions[0].type).toBe('open_url');
     expect(actions[6].type).toBe('shell');

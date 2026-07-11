@@ -1,0 +1,7 @@
+{
+  "id": "weather",
+  "name": "Weather",
+  "version": "1.0.0",
+  "description": "Live temperature on a key face — Open-Meteo, no API key needed.",
+  "main": "main.js"
+}

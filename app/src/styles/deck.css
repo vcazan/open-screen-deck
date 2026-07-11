@@ -92,6 +92,91 @@
   background: rgba(47, 212, 196, 0.1);
 }
 
+/* Destructive-page confirm — anchored under the page strip */
+.deck-pages {
+  position: relative;
+}
+
+.page-confirm {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 264px;
+  padding: 15px 16px 13px;
+  border-radius: 13px;
+  background: #0d1116;
+  border: 1px solid rgba(216, 76, 76, 0.4);
+  box-shadow: 0 18px 44px -8px rgba(0, 0, 0, 0.75);
+  z-index: 20;
+  animation: page-confirm-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes page-confirm-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.page-confirm-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 5px;
+}
+
+.page-confirm-body {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.page-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.page-confirm-cancel {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition: color 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.page-confirm-cancel:hover {
+  color: var(--text-muted);
+}
+
+.page-confirm-remove {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(216, 76, 76, 0.16);
+  border: 1px solid rgba(216, 76, 76, 0.45);
+  color: #e88;
+  transition:
+    background 0.12s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.page-confirm-remove:hover {
+  background: rgba(216, 76, 76, 0.28);
+}
+
+.page-confirm-remove:active {
+  transform: scale(0.96);
+}
+
 .deck-hint {
   display: flex;
   align-items: center;

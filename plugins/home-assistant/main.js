@@ -24,7 +24,7 @@ export function activate(api) {
         ctx.log('webhook: set the Home Assistant URL and webhook ID first');
         return;
       }
-      const res = await fetch(`${base}/api/webhook/${settings.id}`, {
+      const res = await ctx.fetch(`${base}/api/webhook/${settings.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: settings.payload || '{}',

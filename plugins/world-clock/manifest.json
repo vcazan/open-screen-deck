@@ -1,0 +1,7 @@
+{
+  "id": "world-clock",
+  "name": "World Clock",
+  "version": "1.0.0",
+  "description": "A ticking clock for any timezone on a key face.",
+  "main": "main.js"
+}

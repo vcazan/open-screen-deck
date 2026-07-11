@@ -36,7 +36,9 @@ export async function executeAction(action: KeyAction, ctx: ExecuteContext): Pro
 
   // Page switching is firmware-owned (reserved HID codes) — by the time the
   // key event reaches us, the device has already flipped its page.
-  if (action.type === 'page' || action.type === 'page_next') return;
+  if (action.type === 'page' || action.type === 'page_next' || action.type === 'page_prev') {
+    return;
+  }
 
   // Tile presses are handled by the tile scheduler (timer start/stop) in App
   if (action.type === 'tile') return;

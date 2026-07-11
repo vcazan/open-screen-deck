@@ -1,0 +1,7 @@
+{
+  "id": "crypto-price",
+  "name": "Crypto Price",
+  "version": "1.0.0",
+  "description": "Live coin prices on a key face — CoinGecko, no API key needed.",
+  "main": "main.js"
+}

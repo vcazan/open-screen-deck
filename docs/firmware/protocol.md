@@ -1,4 +1,4 @@
-# Serial Protocol (v0.11)
+# Serial Protocol (v0.12)
 
 USB **CDC serial** at **115200 baud**, newline-terminated lines.  
 No custom kernel driver — companion app opens the CDC port (Web Serial or Tauri).
@@ -30,12 +30,26 @@ Boot:
 {"event":"info","name":"Open Screen Deck","fw":"0.10.0","proto":10,"keys":6,"pages":4,"page":0,"mode":"hid"}
 ```
 
-Key press / release (`index` is the global slot):
+Key press / release (`index` is the global slot; `taps` from v0.12):
 
 ```json
-{"event":"key","index":0,"action":"press"}
+{"event":"key","index":0,"action":"press","taps":1}
 {"event":"key","index":0,"action":"release"}
 ```
+
+## Multi-tap (v0.12+)
+
+Each key has three HID bindings: `hid` (single), `h2` (double), `h3`
+(triple) — set via `SET_KEY`, 0 = unbound. **Latency rule:** a key with no
+`h2`/`h3` resolves on the first press instantly. A key with multi-tap
+bindings waits up to **300 ms** between taps, and resolves early the moment
+the highest bound level is reached. Press events report the resolved
+`taps` count.
+
+HID codes **224–229** are silent sentinels: the firmware never types them.
+The companion sets `h2`/`h3` to 229 (`TAP_ARM`) when a double/triple slot
+holds a host-only action (launch, hotkey, …) so the firmware still counts
+taps for it. Page codes (230–239) work at any tap level, standalone.
 
 Page changed (SET_PAGE or an on-device page key):
 
@@ -54,7 +68,7 @@ Page changed (SET_PAGE or an on-device page key):
 | `GET_KEYS` | one `key_state` line per key |
 | `DRAW 0` | redraw key 0 |
 | `DRAW_ALL` | stop animation, redraw all keys |
-| `SET_KEY {...}` | update label/sublabel/hid/bg/ov; persists to NVS. `ov:1` draws text over SD media at render time (v0.8+) |
+| `SET_KEY {...}` | update label/sublabel/hid/h2/h3/bg/ov; persists to NVS. `ov:1` draws text over SD media at render time (v0.8+); `h2`/`h3` bind double/triple press (v0.12+) |
 | `SET_IMAGE {...}` + raw bytes | push 128×128 RGB565 frame to a key (persists to SD) |
 | `SET_FACE {...}` + raw bytes | draw-only frame — live tiles; never touches SD (v0.10+) |
 | `SET_ANIM {...}` + raw bytes | write one animation frame to SD (v0.5+) |

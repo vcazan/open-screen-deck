@@ -4,7 +4,6 @@ import { isTauri } from '../../transport/TauriSerialTransport';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { FirmwareCard } from './FirmwareCard';
-import { PluginsCard } from './PluginsCard';
 
 interface SettingsViewProps {
   deviceFw?: string | null;
@@ -141,8 +140,6 @@ export function SettingsView({ deviceFw = null, usbConnected = false }: Settings
         </div>
 
         <FirmwareCard deviceFw={deviceFw} usbConnected={usbConnected} />
-
-        <PluginsCard />
 
         <div className="settings-card">
           <h2>Companion</h2>

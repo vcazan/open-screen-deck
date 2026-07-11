@@ -1,0 +1,7 @@
+{
+  "id": "philips-hue",
+  "name": "Philips Hue",
+  "version": "1.0.0",
+  "description": "Toggle Hue lights and rooms from deck keys — talks to your bridge directly.",
+  "main": "main.js"
+}

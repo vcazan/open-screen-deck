@@ -15,6 +15,7 @@ import {
   NVS_STORAGE_KEY,
   SD_STORAGE_KEY,
   SIM_SD_SIZE_MB,
+  TAP_WINDOW_MS,
   TOTAL_KEYS,
   defaultKeyForSlot,
 } from '../protocol/constants';
@@ -41,6 +42,9 @@ interface StoredKeyConfig {
   label: string;
   sublabel: string;
   hidKey: number;
+  /** Double/triple press HID bindings — 0/undefined = unbound (fw v0.12) */
+  hid2?: number;
+  hid3?: number;
   bgColor: number;
   fgColor: number;
   /** App-side glyph name; not part of the firmware NVS schema */
@@ -243,12 +247,16 @@ export class SimulatedDevice {
     hid: number,
     bg?: number,
     ov?: number,
+    h2?: number,
+    h3?: number,
   ): void {
     const k = this.keys[index];
     if (!k) return;
     k.label = label;
     k.sublabel = sublabel;
     k.hidKey = hid;
+    if (h2 !== undefined) k.hid2 = h2;
+    if (h3 !== undefined) k.hid3 = h3;
     if (bg !== undefined) k.bgColor = bg;
     if (ov !== undefined) k.overlay = ov !== 0;
     this.drawKey(index);
@@ -382,42 +390,87 @@ export class SimulatedDevice {
     }
   }
 
+  // ── Multi-tap engine (mirrors firmware v0.12) ──────────────
+  // Only keys with a double/triple binding wait for the tap window —
+  // single-only keys resolve on the first press with zero latency.
+
+  private tapCount: number[] = Array(KEY_COUNT).fill(0);
+  private tapSlot: number[] = Array(KEY_COUNT).fill(0);
+  private tapTimers: (ReturnType<typeof setTimeout> | null)[] = Array(KEY_COUNT).fill(null);
+
+  private maxTapsFor(slot: number): number {
+    const k = this.keys[slot];
+    if (k?.hid3) return 3;
+    if (k?.hid2) return 2;
+    return 1;
+  }
+
+  private fireTap(slot: number, taps: number): void {
+    const k = this.keys[slot];
+    const hid = taps >= 3 ? (k.hid3 ?? 0) : taps === 2 ? (k.hid2 ?? 0) : k.hidKey;
+
+    // Page switching is firmware-owned — reserved HID codes never type
+    if (hid === HID_PAGE_NEXT) {
+      setTimeout(() => this.switchPage((this.page + 1) % this.pageCount), 90);
+    } else if (hid === HID_PAGE_PREV) {
+      setTimeout(
+        () => this.switchPage((this.page + this.pageCount - 1) % this.pageCount),
+        90,
+      );
+    } else if (hid >= HID_PAGE_BASE && hid < HID_PAGE_BASE + MAX_PAGES) {
+      setTimeout(() => this.switchPage(hid - HID_PAGE_BASE), 90);
+    } else if (hid !== 0 && !(hid >= 224 && hid <= 239)) {
+      this.lastHidSent = {
+        index: slot % KEY_COUNT,
+        code: hid,
+        label: this.hidLabel(hid),
+      };
+      this.notifyState();
+    }
+
+    this.emit({ event: 'key', index: slot, action: 'press', taps });
+  }
+
+  private resolveTaps(position: number): void {
+    const taps = this.tapCount[position];
+    const slot = this.tapSlot[position];
+    this.tapCount[position] = 0;
+    if (this.tapTimers[position]) {
+      clearTimeout(this.tapTimers[position]!);
+      this.tapTimers[position] = null;
+    }
+    if (taps === 0) return;
+    this.fireTap(slot, Math.min(taps, this.maxTapsFor(slot)));
+  }
+
   /** Simulate a physical key press at a visible position (0..5). */
   press(position: number): void {
     if (position < 0 || position >= KEY_COUNT) return;
     const slot = this.slotOfPos(position);
     drawKeyPressedEffect(this.contexts[position]);
     this.notifyState();
-
-    const k = this.keys[slot];
-    const hid = k.hidKey;
-
-    // Page switching is firmware-owned — reserved HID codes never type
-    if (hid === HID_PAGE_NEXT) {
-      setTimeout(() => this.switchPage((this.page + 1) % this.pageCount), 90);
-      this.emit({ event: 'key', index: slot, action: 'press' });
-      return;
-    }
-    if (hid === HID_PAGE_PREV) {
-      setTimeout(() => this.switchPage((this.page + this.pageCount - 1) % this.pageCount), 90);
-      this.emit({ event: 'key', index: slot, action: 'press' });
-      return;
-    }
-    if (hid >= HID_PAGE_BASE && hid < HID_PAGE_BASE + MAX_PAGES) {
-      setTimeout(() => this.switchPage(hid - HID_PAGE_BASE), 90);
-      this.emit({ event: 'key', index: slot, action: 'press' });
-      return;
-    }
-
-    this.lastHidSent = { index: position, code: hid, label: this.hidLabel(hid) };
-    this.notifyState();
-
     setTimeout(() => {
       this.drawKey(slot);
       this.notifyState();
     }, 80);
 
-    this.emit({ event: 'key', index: slot, action: 'press' });
+    if (this.tapCount[position] === 0) {
+      // First press: single-only keys fire immediately, no tap window
+      if (this.maxTapsFor(slot) === 1) {
+        this.fireTap(slot, 1);
+        return;
+      }
+      this.tapSlot[position] = slot;
+    }
+    this.tapCount[position]++;
+    if (this.tapTimers[position]) clearTimeout(this.tapTimers[position]!);
+
+    // Highest bound level reached — resolve now instead of waiting
+    if (this.tapCount[position] >= this.maxTapsFor(this.tapSlot[position])) {
+      this.resolveTaps(position);
+      return;
+    }
+    this.tapTimers[position] = setTimeout(() => this.resolveTaps(position), TAP_WINDOW_MS);
   }
 
   /** Show a page on the six screens — persists like firmware NVS. */
@@ -592,6 +645,8 @@ export class SimulatedDevice {
         label: this.keys[i].label,
         sublabel: this.keys[i].sublabel,
         hid: this.keys[i].hidKey,
+        h2: this.keys[i].hid2 ?? 0,
+        h3: this.keys[i].hid3 ?? 0,
         bg: this.keys[i].bgColor,
         ov: this.keys[i].overlay ? 1 : 0,
       });
@@ -608,6 +663,8 @@ export class SimulatedDevice {
     const sub = extractJsonString(line, 'sublabel');
     const icon = extractJsonString(line, 'icon');
     const hid = extractJsonInt(line, 'hid', this.keys[idx].hidKey);
+    const h2 = extractJsonInt(line, 'h2', this.keys[idx].hid2 ?? 0);
+    const h3 = extractJsonInt(line, 'h3', this.keys[idx].hid3 ?? 0);
     const bg = extractJsonInt(line, 'bg', this.keys[idx].bgColor);
     const ov = extractJsonInt(line, 'ov', this.keys[idx].overlay ? 1 : 0);
 
@@ -616,6 +673,8 @@ export class SimulatedDevice {
     if (sub !== null) this.keys[idx].sublabel = sub.slice(0, 15);
     if (icon !== null && icon.length) this.keys[idx].icon = icon;
     this.keys[idx].hidKey = hid;
+    this.keys[idx].hid2 = h2;
+    this.keys[idx].hid3 = h3;
     this.keys[idx].bgColor = bg;
     this.keys[idx].overlay = ov !== 0;
 
@@ -910,9 +969,12 @@ export class SimulatedDevice {
       label: k.label,
       sublabel: k.sublabel,
       hidKey: k.hidKey,
+      hid2: k.hid2,
+      hid3: k.hid3,
       bgColor: k.bgColor,
       fgColor: k.fgColor,
       icon: k.icon,
+      overlay: k.overlay,
     }));
     try {
       localStorage.setItem(NVS_STORAGE_KEY, JSON.stringify(data));
@@ -1068,5 +1130,6 @@ export class SimulatedDevice {
 
   destroy(): void {
     this.stopAnimation();
+    this.tapTimers.forEach((t) => t && clearTimeout(t));
   }
 }

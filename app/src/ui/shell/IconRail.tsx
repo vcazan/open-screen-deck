@@ -31,6 +31,13 @@ function NavIcon({ name }: { name: AppView }) {
           <path d="M4 16.5L12 21l8-4.5" />
         </svg>
       );
+    case 'plugins':
+      // Puzzle piece
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M10 3.5A1.5 1.5 0 0111.5 2h1A1.5 1.5 0 0114 3.5V5h3a2 2 0 012 2v3h-1.5a1.5 1.5 0 00-1.5 1.5v1a1.5 1.5 0 001.5 1.5H19v3a2 2 0 01-2 2h-3v-1.5a1.5 1.5 0 00-1.5-1.5h-1a1.5 1.5 0 00-1.5 1.5V19H7a2 2 0 01-2-2v-3H3.5A1.5 1.5 0 012 12.5v-1A1.5 1.5 0 013.5 10H5V7a2 2 0 012-2h3V3.5z" />
+        </svg>
+      );
     case 'storage':
       return (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
@@ -59,6 +66,7 @@ function NavIcon({ name }: { name: AppView }) {
 const NAV_LABELS: Record<AppView, string> = {
   deck: 'Deck',
   profiles: 'Profiles',
+  plugins: 'Plugins',
   storage: 'Storage',
   console: 'Console',
   settings: 'Settings',

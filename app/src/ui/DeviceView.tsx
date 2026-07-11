@@ -19,6 +19,8 @@ interface DeviceViewProps {
   page: number;
   pages: number;
   maxPages: number;
+  /** The last page holds custom keys/actions/media — removal needs a confirm */
+  lastPageDirty: boolean;
   onPageChange: (page: number) => void;
   onAddPage: () => void;
   onRemovePage: () => void;
@@ -49,6 +51,7 @@ export function DeviceView({
   page,
   pages,
   maxPages,
+  lastPageDirty,
   onPageChange,
   onAddPage,
   onRemovePage,
@@ -62,6 +65,23 @@ export function DeviceView({
 }: DeviceViewProps) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [confirmRemovePage, setConfirmRemovePage] = useState(false);
+
+  const requestRemovePage = () => {
+    // Untouched pages vanish silently — only warn when keys would be lost
+    if (lastPageDirty) setConfirmRemovePage(true);
+    else onRemovePage();
+  };
+
+  // The confirm is anchored to the page strip; dismiss on Escape
+  useEffect(() => {
+    if (!confirmRemovePage) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfirmRemovePage(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [confirmRemovePage]);
   const landscape = orientation % 2 === 1;
   // The physical USB-C port sits on the deck's rear edge (top in portrait).
   // Rotating the deck moves it: this is your bearings marker.
@@ -203,8 +223,8 @@ export function DeviceView({
               <button
                 type="button"
                 className="deck-page-btn deck-page-edit"
-                onClick={onRemovePage}
-                title="Remove the last page (its keys reset)"
+                onClick={requestRemovePage}
+                title="Remove the last page"
                 aria-label="Remove last page"
               >
                 −
@@ -220,6 +240,34 @@ export function DeviceView({
               >
                 +
               </button>
+            )}
+            {confirmRemovePage && (
+              <div className="page-confirm" role="alertdialog" aria-label="Remove page">
+                <div className="page-confirm-title">Remove page {pages}?</div>
+                <p className="page-confirm-body">
+                  Its keys have custom labels, actions, or media — everything on this page
+                  will be deleted. ⌘Z brings it back.
+                </p>
+                <div className="page-confirm-actions">
+                  <button
+                    type="button"
+                    className="page-confirm-cancel"
+                    onClick={() => setConfirmRemovePage(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="page-confirm-remove"
+                    onClick={() => {
+                      setConfirmRemovePage(false);
+                      onRemovePage();
+                    }}
+                  >
+                    Remove page
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}

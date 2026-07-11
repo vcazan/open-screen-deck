@@ -32,6 +32,8 @@ export interface KeyEvent {
   event: 'key';
   index: number;
   action: 'press' | 'release';
+  /** Resolved tap count (v0.12+): 1 single, 2 double, 3 triple */
+  taps?: number;
 }
 
 export interface KeyStateEvent {
@@ -43,6 +45,9 @@ export interface KeyStateEvent {
   label: string;
   sublabel: string;
   hid: number;
+  /** Double/triple press HID bindings, 0 = unbound (v0.12+) */
+  h2?: number;
+  h3?: number;
   /** RGB565 background — present from firmware v0.7.1 */
   bg?: number;
   /** Overlay flag (text drawn over media) — present from firmware v0.8 */
@@ -143,6 +148,9 @@ export interface SetKeyPayload {
   label?: string;
   sublabel?: string;
   hid?: number;
+  /** Double/triple press HID bindings — 0 clears (v0.12+) */
+  h2?: number;
+  h3?: number;
   bg?: number;
   /** Overlay flag: draw label/sublabel over SD media at render time (v0.8+) */
   ov?: number;
@@ -187,4 +195,7 @@ export interface ProfileData {
   keys: Omit<KeyConfig, 'index'>[];
   /** v2+: one host action per key slot (JSON shape from actions/types.ts) */
   actions?: unknown[];
+  /** v0.12+: double / triple press actions per slot (null = unbound) */
+  actionsDouble?: unknown[];
+  actionsTriple?: unknown[];
 }

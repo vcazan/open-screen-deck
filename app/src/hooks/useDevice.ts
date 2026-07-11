@@ -53,8 +53,8 @@ export interface DeviceContextValue {
   deviceInfo: DeviceEvent | null;
   refreshTick: number;
   webSerialSupported: boolean;
-  /** Register the action router — called with the key index on each press. */
-  setKeyPressHandler: (handler: ((index: number) => void) | null) => void;
+  /** Register the action router — called with (slot, taps) on each resolved press. */
+  setKeyPressHandler: (handler: ((index: number, taps: number) => void) | null) => void;
   /** Write an app-side note into the protocol console. */
   logLocal: (line: string) => void;
 }
@@ -105,7 +105,7 @@ export function useDeviceManager(): DeviceContextValue {
     }[]
   >([]);
   const sdLsCollectorRef = useRef<{ entries: SdEntry[] } | null>(null);
-  const keyPressHandlerRef = useRef<((index: number) => void) | null>(null);
+  const keyPressHandlerRef = useRef<((index: number, taps: number) => void) | null>(null);
 
   /**
    * Protocol operation lock. Binary transfers (SET_IMAGE / SET_ANIM) span
@@ -205,7 +205,7 @@ export function useDeviceManager(): DeviceContextValue {
             simDeviceRef.current.mirrorPages(ev.pages);
           }
           if (ev.event === 'key' && ev.action === 'press') {
-            keyPressHandlerRef.current?.(ev.index);
+            keyPressHandlerRef.current?.(ev.index, ev.taps ?? 1);
           }
           // USB: sync the local mirror from the device's reported key state
           if (ev.event === 'key_state' && transportMode === 'webserial') {
@@ -216,6 +216,8 @@ export function useDeviceManager(): DeviceContextValue {
               ev.hid,
               ev.bg,
               ev.ov,
+              ev.h2,
+              ev.h3,
             );
           }
         } catch {
@@ -462,9 +464,12 @@ export function useDeviceManager(): DeviceContextValue {
     setConsoleEntries([]);
   }, []);
 
-  const setKeyPressHandler = useCallback((handler: ((index: number) => void) | null) => {
-    keyPressHandlerRef.current = handler;
-  }, []);
+  const setKeyPressHandler = useCallback(
+    (handler: ((index: number, taps: number) => void) | null) => {
+      keyPressHandlerRef.current = handler;
+    },
+    [],
+  );
 
   const logLocal = useCallback(
     (line: string) => {

@@ -36,8 +36,8 @@
 #define PIN_BL    13
 #define PIN_SD_CS 16
 
-#define FIRMWARE_VERSION "0.11.0"
-#define PROTOCOL_VERSION 11
+#define FIRMWARE_VERSION "0.12.0"
+#define PROTOCOL_VERSION 12
 
 // Transparency sentinel (big-endian bytes 0x08,0x21): icon pixels with this
 // value adopt the key's background color at draw time, so recoloring a key
@@ -50,18 +50,30 @@
 #define TOTAL_KEYS (KEY_COUNT * MAX_PAGES)   // global key slots (48)
 #define FRAME_BYTES (128 * 128 * 2)   // RGB565
 
-// Reserved HID codes (in the 219–239 gap of the Arduino keymap — clear of
+// Reserved HID codes (in the 224–239 gap of the Arduino keymap — clear of
 // F13–F24 at 240+ and named keys below 0xDA): pressing a key configured
 // with one of these switches pages on-device, standalone AND under the
 // companion — the firmware owns page switching so the two never fight.
+// 224..229 are silent sentinels: never typed, they exist so the companion
+// can arm multi-tap detection for host-only actions.
+#define HID_INTERNAL_MIN 224
+#define HID_INTERNAL_MAX 239
 #define HID_PAGE_PREV 230
 #define HID_PAGE_NEXT 231
 #define HID_PAGE_BASE 232              // 232..239 → go to page 0..7
+
+// Multi-tap: max ms between taps of one sequence. Only keys with a double
+// or triple binding ever wait — single-only keys fire with zero latency.
+#define TAP_WINDOW_MS 300
 
 struct KeyConfig {
     char     label[16];
     char     sublabel[16];
     uint8_t  hidKey;
+    // Double / triple press bindings (0 = unbound). When both are 0 the key
+    // resolves on the first press — no tap-window latency.
+    uint8_t  hid2;
+    uint8_t  hid3;
     uint16_t bgColor;
     uint16_t fgColor;
     // Draw label/sublabel over SD media at render time (images stay raw —
@@ -120,12 +132,12 @@ static inline uint8_t displayRotation() {
 // Global key slots: slot = page*KEY_COUNT + position. Page 0 ships with the
 // classic defaults; added pages start blank-ish and are filled by the app.
 static KeyConfig keys[TOTAL_KEYS] = {
-    {"MUTE",    "Toggle", KEY_F13, 0x4A69, ST77XX_WHITE, 0},
-    {"SCENE 1", "OBS",    KEY_F14, 0x000F, ST77XX_WHITE, 0},
-    {"SCENE 2", "OBS",    KEY_F15, 0x000F, ST77XX_CYAN , 0},
-    {"CLIP",    "Record", KEY_F16, 0x6000, ST77XX_WHITE, 0},
-    {"BROWSER", "Win",    KEY_F17, 0x0003, ST77XX_WHITE, 0},
-    {"MACRO",   "Custom", KEY_F18, 0x0300, ST77XX_WHITE, 0},
+    {"MUTE",    "Toggle", KEY_F13, 0, 0, 0x4A69, ST77XX_WHITE, 0},
+    {"SCENE 1", "OBS",    KEY_F14, 0, 0, 0x000F, ST77XX_WHITE, 0},
+    {"SCENE 2", "OBS",    KEY_F15, 0, 0, 0x000F, ST77XX_CYAN , 0},
+    {"CLIP",    "Record", KEY_F16, 0, 0, 0x6000, ST77XX_WHITE, 0},
+    {"BROWSER", "Win",    KEY_F17, 0, 0, 0x0003, ST77XX_WHITE, 0},
+    {"MACRO",   "Custom", KEY_F18, 0, 0, 0x0300, ST77XX_WHITE, 0},
     // slots 6.. initialized in setup() (dark defaults)
 };
 
@@ -138,6 +150,8 @@ static void defaultSlotConfig(uint8_t s) {
     snprintf(keys[s].label, sizeof(keys[s].label), "KEY %u", (unsigned)((s % KEY_COUNT) + 1));
     keys[s].sublabel[0] = '\0';
     keys[s].hidKey  = (uint8_t)(KEY_F13 + (s % 12));
+    keys[s].hid2    = 0;
+    keys[s].hid3    = 0;
     keys[s].bgColor = 0x2124;   // dark gray
     keys[s].fgColor = ST77XX_WHITE;
     keys[s].overlay = 0;
@@ -390,6 +404,75 @@ void emitKeyEvent(uint8_t idx, const char* action) {
     Serial.printf("{\"event\":\"key\",\"index\":%u,\"action\":\"%s\"}\n", idx, action);
 }
 
+// ── Multi-tap engine ─────────────────────────────────────────
+// Per PHYSICAL key: taps accumulated in the current sequence. A key whose
+// slot has no hid2/hid3 binding resolves on the first press — zero latency.
+
+static void switchPage(uint8_t page);   // defined with the page helpers below
+
+static uint8_t  tapCount[KEY_COUNT] = {0};
+static uint32_t tapLastMs[KEY_COUNT] = {0};
+static uint8_t  tapSlot[KEY_COUNT] = {0};   // slot captured at the first tap
+
+static uint8_t maxTapsFor(uint8_t slot) {
+    if (keys[slot].hid3) return 3;
+    if (keys[slot].hid2) return 2;
+    return 1;
+}
+
+// Perform the action bound to a resolved tap level and tell the companion.
+static void fireTap(uint8_t slot, uint8_t taps) {
+    uint8_t hid = taps >= 3 ? keys[slot].hid3
+                : taps == 2 ? keys[slot].hid2
+                            : keys[slot].hidKey;
+
+    if (hid == HID_PAGE_NEXT) {
+        // Page switching is firmware-owned: works standalone and under the
+        // companion identically
+        switchPage((currentPage + 1) % pageCount);
+    } else if (hid == HID_PAGE_PREV) {
+        switchPage((currentPage + pageCount - 1) % pageCount);
+    } else if (hid >= HID_PAGE_BASE && hid < HID_PAGE_BASE + MAX_PAGES) {
+        switchPage(hid - HID_PAGE_BASE);  // no-op beyond pageCount
+    } else if (!companionMode && hid != 0 &&
+               !(hid >= HID_INTERNAL_MIN && hid <= HID_INTERNAL_MAX)) {
+        Keyboard.press(hid);
+        delay(20);
+        Keyboard.release(hid);
+    }
+
+    if (Serial) {
+        Serial.printf("{\"event\":\"key\",\"index\":%u,\"action\":\"press\",\"taps\":%u}\n",
+                      slot, taps);
+    }
+}
+
+static void resolveTaps(uint8_t pos) {
+    uint8_t taps = tapCount[pos];
+    uint8_t slot = tapSlot[pos];
+    tapCount[pos] = 0;
+    if (taps == 0) return;
+    uint8_t maxTaps = maxTapsFor(slot);
+    fireTap(slot, taps > maxTaps ? maxTaps : taps);
+}
+
+static void registerTap(uint8_t pos, uint8_t slot, uint32_t now) {
+    if (tapCount[pos] == 0) {
+        // First press: single-only keys fire immediately (no tap window)
+        if (maxTapsFor(slot) == 1) {
+            fireTap(slot, 1);
+            return;
+        }
+        tapSlot[pos] = slot;
+    }
+    tapCount[pos]++;
+    tapLastMs[pos] = now;
+    // Reached the highest bound level — resolve now instead of waiting
+    if (tapCount[pos] >= maxTapsFor(tapSlot[pos])) {
+        resolveTaps(pos);
+    }
+}
+
 void printDeviceInfo() {
     Serial.printf("{\"event\":\"info\",\"name\":\"Open Screen Deck\",\"fw\":\"%s\",\"proto\":%d,\"keys\":%d,\"pages\":%d,\"page\":%u,\"sd\":%s,\"psram\":%u,\"mode\":\"%s\",\"orient\":%u}\n",
                   FIRMWARE_VERSION, PROTOCOL_VERSION, KEY_COUNT, pageCount, currentPage,
@@ -400,8 +483,10 @@ void printDeviceInfo() {
 void printKeyState() {
     // Every configured slot — index is the slot; page = index/6
     for (uint8_t i = 0; i < pageCount * KEY_COUNT; i++) {
-        Serial.printf("{\"event\":\"key_state\",\"index\":%u,\"page\":%u,\"label\":\"%s\",\"sublabel\":\"%s\",\"hid\":%u,\"bg\":%u,\"ov\":%u}\n",
-                      i, pageOfSlot(i), keys[i].label, keys[i].sublabel, keys[i].hidKey, keys[i].bgColor, keys[i].overlay);
+        Serial.printf("{\"event\":\"key_state\",\"index\":%u,\"page\":%u,\"label\":\"%s\",\"sublabel\":\"%s\",\"hid\":%u,\"h2\":%u,\"h3\":%u,\"bg\":%u,\"ov\":%u}\n",
+                      i, pageOfSlot(i), keys[i].label, keys[i].sublabel,
+                      keys[i].hidKey, keys[i].hid2, keys[i].hid3,
+                      keys[i].bgColor, keys[i].overlay);
     }
 }
 
@@ -502,11 +587,15 @@ void handleCommand(String& line) {
         }
         String lbl, sub;
         long hid = jsonInt(line, "hid", keys[idx].hidKey);
+        long h2  = jsonInt(line, "h2", keys[idx].hid2);
+        long h3  = jsonInt(line, "h3", keys[idx].hid3);
         long bg  = jsonInt(line, "bg", keys[idx].bgColor);
         long ov  = jsonInt(line, "ov", keys[idx].overlay);
         if (jsonStrField(line, "label", lbl))    strlcpy(keys[idx].label, lbl.c_str(), sizeof(keys[idx].label));
         if (jsonStrField(line, "sublabel", sub)) strlcpy(keys[idx].sublabel, sub.c_str(), sizeof(keys[idx].sublabel));
         keys[idx].hidKey  = (uint8_t)hid;
+        keys[idx].hid2    = (uint8_t)h2;
+        keys[idx].hid3    = (uint8_t)h3;
         keys[idx].bgColor = (uint16_t)bg;
         keys[idx].overlay = ov ? 1 : 0;
         saveConfig((uint8_t)idx);
@@ -742,6 +831,10 @@ void loadConfig() {
         if (sub.length()) strlcpy(keys[i].sublabel, sub.c_str(), sizeof(keys[i].sublabel));
         snprintf(k, sizeof(k), "h%u", i);
         keys[i].hidKey = prefs.getUChar(k, keys[i].hidKey);
+        snprintf(k, sizeof(k), "i%u", i);
+        keys[i].hid2 = prefs.getUChar(k, keys[i].hid2);
+        snprintf(k, sizeof(k), "j%u", i);
+        keys[i].hid3 = prefs.getUChar(k, keys[i].hid3);
         snprintf(k, sizeof(k), "b%u", i);
         keys[i].bgColor = prefs.getUShort(k, keys[i].bgColor);
         snprintf(k, sizeof(k), "o%u", i);
@@ -759,6 +852,10 @@ void saveConfig(uint8_t idx) {
     prefs.putString(k, keys[idx].sublabel);
     snprintf(k, sizeof(k), "h%u", idx);
     prefs.putUChar(k, keys[idx].hidKey);
+    snprintf(k, sizeof(k), "i%u", idx);
+    prefs.putUChar(k, keys[idx].hid2);
+    snprintf(k, sizeof(k), "j%u", idx);
+    prefs.putUChar(k, keys[idx].hid3);
     snprintf(k, sizeof(k), "b%u", idx);
     prefs.putUShort(k, keys[idx].bgColor);
     snprintf(k, sizeof(k), "o%u", idx);
@@ -845,26 +942,19 @@ void loop() {
             uint8_t slot = slotOfPos(PHYS_TO_LOGICAL[i]);
             if (state == LOW && lastState[i] == HIGH) {
                 drawKeyPressed(slot);
-                uint8_t hid = keys[slot].hidKey;
-                if (hid == HID_PAGE_NEXT) {
-                    // Page switching is firmware-owned: works standalone and
-                    // under the companion identically
-                    switchPage((currentPage + 1) % pageCount);
-                } else if (hid == HID_PAGE_PREV) {
-                    switchPage((currentPage + pageCount - 1) % pageCount);
-                } else if (hid >= HID_PAGE_BASE && hid < HID_PAGE_BASE + MAX_PAGES) {
-                    switchPage(hid - HID_PAGE_BASE);  // no-op beyond pageCount
-                } else if (!companionMode) {
-                    Keyboard.press(hid);
-                    delay(20);
-                    Keyboard.release(hid);
-                }
-                emitKeyEvent(slot, "press");
+                registerTap(i, slot, now);
             } else if (state == HIGH && lastState[i] == LOW) {
                 emitKeyEvent(slot, "release");
             }
         }
 
         lastState[i] = state;
+    }
+
+    // Pending tap sequences whose window expired resolve at their count
+    for (int i = 0; i < KEY_COUNT; i++) {
+        if (tapCount[i] > 0 && (now - tapLastMs[i]) > TAP_WINDOW_MS) {
+            resolveTaps(i);
+        }
     }
 }

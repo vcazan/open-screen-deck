@@ -1,0 +1,7 @@
+{
+  "id": "soundboard",
+  "name": "Soundboard",
+  "version": "1.0.0",
+  "description": "Play sounds and stingers from deck keys — press again to stop.",
+  "main": "main.js"
+}

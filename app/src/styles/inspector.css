@@ -82,6 +82,13 @@
   color: var(--text-ghost);
 }
 
+.tap-level-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
 .inspector-page-chip {
   padding: 2px 8px;
   border-radius: 999px;

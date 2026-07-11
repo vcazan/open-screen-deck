@@ -17,6 +17,7 @@ export type KeyAction =
   | { type: 'mic_mute'; faces?: { live: StateFace; muted: StateFace } }
   | { type: 'obs_scene'; scene: string }
   | { type: 'page_next' }
+  | { type: 'page_prev' }
   | { type: 'page'; page: number }
   | { type: 'tile'; kind: TileKind }
   /** Contributed by a plugin — `plugin` is "<pluginId>:<actionType>" */
@@ -69,6 +70,11 @@ export const ACTION_TYPE_META: Record<
     needsCompanion: false,
     hint: 'Cycles the deck to its next page — handled by the device itself.',
   },
+  page_prev: {
+    label: 'Previous page',
+    needsCompanion: false,
+    hint: 'Cycles the deck to its previous page — handled by the device itself.',
+  },
   page: {
     label: 'Go to page',
     needsCompanion: false,
@@ -114,6 +120,8 @@ export function defaultActionForType(type: KeyActionType, hid: number): KeyActio
       return { type: 'obs_scene', scene: '' };
     case 'page_next':
       return { type: 'page_next' };
+    case 'page_prev':
+      return { type: 'page_prev' };
     case 'page':
       return { type: 'page', page: 0 };
     case 'tile':
@@ -153,6 +161,8 @@ export function describeAction(action: KeyAction): string {
       return `OBS scene → ${action.scene || '(unset)'}`;
     case 'page_next':
       return 'next deck page';
+    case 'page_prev':
+      return 'previous deck page';
     case 'page':
       return `deck page ${action.page + 1}`;
     case 'tile':

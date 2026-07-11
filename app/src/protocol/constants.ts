@@ -9,17 +9,27 @@ export const FRAME_WIDTH = 128;
 export const FRAME_HEIGHT = 128;
 export const FRAME_BYTES = FRAME_WIDTH * FRAME_HEIGHT * 2; // 32768 RGB565
 
-export const FIRMWARE_VERSION = '0.11.0';
+export const FIRMWARE_VERSION = '0.12.0';
 export const DEVICE_NAME = 'Open Screen Deck';
 
 /**
  * Reserved HID codes — a key configured with one of these switches pages
  * on-device (firmware-owned, works standalone and under the companion).
- * They live in the 219–239 gap of the Arduino keymap, clear of F13–F24.
+ * They live in the 224–239 gap of the Arduino keymap, clear of F13–F24.
  */
 export const HID_PAGE_PREV = 230;
 export const HID_PAGE_NEXT = 231;
 export const HID_PAGE_BASE = 232; // 232..239 → go to page 0..7
+/**
+ * Silent sentinel: never typed by the firmware. The companion sets it as a
+ * key's h2/h3 to ARM double/triple-tap detection for host-only actions —
+ * without it the firmware would fire single presses instantly and never
+ * report multi-taps.
+ */
+export const HID_TAP_ARM = 229;
+
+/** Max ms between taps of one multi-tap sequence (mirrors firmware). */
+export const TAP_WINDOW_MS = 300;
 
 /**
  * Arduino USBHIDKeyboard codes for F13–F24 (ESP32 core: KEY_F13 = 0xF0).

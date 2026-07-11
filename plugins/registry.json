@@ -3,6 +3,96 @@
   "version": 1,
   "plugins": [
     {
+      "id": "weather",
+      "name": "Weather",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Live temperature on a key face — Open-Meteo, no API key needed.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/weather",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "crypto-price",
+      "name": "Crypto Price",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Live coin prices with 24h trend colors — CoinGecko, no API key needed.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/crypto-price",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "world-clock",
+      "name": "World Clock",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "A ticking clock for any timezone on a key face.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/world-clock",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "web-request",
+      "name": "Web Request",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Fire any HTTP request from a key — webhooks, REST APIs, IFTTT, n8n.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/web-request",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "philips-hue",
+      "name": "Philips Hue",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Toggle Hue lights and rooms from deck keys — talks to your bridge directly.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/philips-hue",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "soundboard",
+      "name": "Soundboard",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Play sounds and stingers from deck keys — press again to stop.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/soundboard",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "text-snippet",
+      "name": "Text Snippets",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Type canned text into whatever app has focus — emails, replies, emotes.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/text-snippet",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "zoom-control",
+      "name": "Zoom Control",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Mute, video, and hand-raise for Zoom meetings — works without focusing Zoom.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/zoom-control",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "screenshot",
+      "name": "Screenshot",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Capture the screen, a window, or an area — to clipboard or a folder.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/screenshot",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "system-actions",
+      "name": "System Actions",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Lock the screen, sleep the displays, empty the trash, toggle dark mode.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/system-actions",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
       "id": "home-assistant",
       "name": "Home Assistant",
       "version": "1.0.0",

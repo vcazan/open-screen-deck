@@ -71,6 +71,51 @@ pub fn plugin_fetch_registry(url: String) -> Result<serde_json::Value, String> {
     serde_json::from_str(&text).map_err(|e| format!("registry is not valid JSON: {e}"))
 }
 
+#[derive(Serialize)]
+pub struct PluginHttpResult {
+    pub status: u16,
+    pub body: String,
+}
+
+/// HTTP for plugins (`ctx.fetch`). Runs in Rust because the webview blocks
+/// plain-http and CORS-less endpoints — exactly what Hue bridges, local
+/// webhooks, and most home-automation targets are.
+#[tauri::command]
+pub fn plugin_http(
+    method: String,
+    url: String,
+    headers: Option<std::collections::HashMap<String, String>>,
+    body: Option<String>,
+) -> Result<PluginHttpResult, String> {
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err(format!("unsupported URL: {url}"));
+    }
+    let mut req = ureq::request(&method.to_uppercase(), &url)
+        .timeout(std::time::Duration::from_secs(15));
+    if let Some(headers) = headers {
+        for (k, v) in &headers {
+            req = req.set(k, v);
+        }
+    }
+    let result = match body {
+        Some(b) if !b.is_empty() => req.send_string(&b),
+        _ => req.call(),
+    };
+    match result {
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.into_string().unwrap_or_default();
+            Ok(PluginHttpResult { status, body })
+        }
+        // Non-2xx is still a response — plugins decide what it means
+        Err(ureq::Error::Status(status, resp)) => Ok(PluginHttpResult {
+            status,
+            body: resp.into_string().unwrap_or_default(),
+        }),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Store install: download every listed file and write it into the plugin
 /// folder. Downloads happen in Rust (see plugin_fetch_registry).
 #[tauri::command]

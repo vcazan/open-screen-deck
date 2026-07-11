@@ -24,6 +24,7 @@ import {
   type AppView,
 } from './ui/shell/types';
 import { ConsoleView } from './ui/views/ConsoleView';
+import { PluginsView } from './ui/views/PluginsView';
 import { ProfilesView, exportAllProfiles } from './ui/views/ProfilesView';
 import { SettingsView } from './ui/views/SettingsView';
 import { StorageView } from './ui/views/StorageView';
@@ -34,6 +35,7 @@ import {
   parsePortableProfile,
   profilePageCount,
   profileToKeyConfigs,
+  profileToMultiActions,
 } from './utils/profiles';
 import {
   deleteProfileMedia,
@@ -42,7 +44,16 @@ import {
   mediaSignature,
   saveProfileMedia,
 } from './utils/profileMedia';
-import { KEY_COUNT, MAX_PAGES, TOTAL_KEYS, defaultKeyForSlot } from './protocol/constants';
+import {
+  HID_PAGE_BASE,
+  HID_PAGE_NEXT,
+  HID_PAGE_PREV,
+  HID_TAP_ARM,
+  KEY_COUNT,
+  MAX_PAGES,
+  TOTAL_KEYS,
+  defaultKeyForSlot,
+} from './protocol/constants';
 import { encodeCommand } from './protocol/codec';
 import { rgb565ToRgb888 } from './protocol/rgb565';
 import { useKeyActions } from './hooks/useKeyActions';
@@ -55,6 +66,7 @@ import {
   type KeySnapshot,
 } from './utils/deckSnapshot';
 import { executeAction } from './actions/executor';
+import { createTapResolver } from './utils/tapResolver';
 import { DEFAULT_MIC_FACES } from './actions/types';
 import { profileToActions } from './utils/profiles';
 import { isTauri } from './transport/TauriSerialTransport';
@@ -151,15 +163,73 @@ export default function App() {
     [device],
   );
 
+  /** Does the LAST page hold anything worth warning about before removal? */
+  const lastPageDirty = (() => {
+    if (!deckState || deckPages <= 1) return false;
+    const p = deckPages - 1;
+    for (let pos = 0; pos < KEY_COUNT; pos++) {
+      const slot = p * KEY_COUNT + pos;
+      const m = deckState.media[slot];
+      if (m?.hasIcon || m?.animFrames) return true;
+      const k = deckState.keys[slot];
+      const d = defaultKeyForSlot(slot);
+      if (
+        k &&
+        (k.label !== d.label ||
+          k.sublabel !== d.sublabel ||
+          k.hidKey !== d.hid ||
+          k.bgColor !== d.bg)
+      ) {
+        return true;
+      }
+      const a = keyActions.actions[slot];
+      if (a && !(a.type === 'hid' && a.code === d.hid)) return true;
+    }
+    return false;
+  })();
+
+  // ── Editing: undo/redo, copy/paste, drag-swap ────────────────
+  const undoActionsRef = useRef(keyActions.actions);
+  undoActionsRef.current = keyActions.actions;
+  const undoMultiRef = useRef({ double: keyActions.double, triple: keyActions.triple });
+  undoMultiRef.current = { double: keyActions.double, triple: keyActions.triple };
+  const deckOps = useRef({
+    sendCommand: (line: string) => device.sendCommand(line),
+    sendSetImage: (i: number, b: Uint8Array) => device.sendSetImage(i, b),
+    sendAnimation: (i: number, f: Uint8Array[], fps: number) => device.sendAnimation(i, f, fps),
+    deleteSdPath: (p: string) => device.deleteSdPath(p),
+    setAllActions: (
+      s: Parameters<typeof keyActions.setAll>[0],
+      d: Parameters<typeof keyActions.setAll>[1],
+      t: Parameters<typeof keyActions.setAll>[2],
+    ) => keyActions.setAll(s, d, t),
+  });
+  deckOps.current.sendCommand = (line) => device.sendCommand(line);
+  deckOps.current.sendSetImage = (i, b) => device.sendSetImage(i, b);
+  deckOps.current.sendAnimation = (i, f, fps) => device.sendAnimation(i, f, fps);
+  deckOps.current.deleteSdPath = (p) => device.deleteSdPath(p);
+  deckOps.current.setAllActions = (s, d, t) => keyActions.setAll(s, d, t);
+
+  const { checkpoint, undo, redo } = useUndoStack(
+    device.device,
+    undoActionsRef,
+    undoMultiRef,
+    deckOps.current,
+  );
+
+  const copiedKeyRef = useRef<KeySnapshot | null>(null);
+
   const handleAddPage = useCallback(() => {
     if (deckPages >= deckMaxPages) return;
+    checkpoint(false); // ⌘Z removes the page again
     device.sendCommand(encodeCommand({ type: 'SET_PAGES', pages: deckPages + 1 }));
     // Jump to the fresh page so it's immediately editable
     device.sendCommand(encodeCommand({ type: 'SET_PAGE', page: deckPages }));
-  }, [device, deckPages, deckMaxPages]);
+  }, [device, deckPages, deckMaxPages, checkpoint]);
 
   const handleRemovePage = useCallback(() => {
     if (deckPages <= 1) return;
+    checkpoint(false); // ⌘Z restores the page, keys and media included
     // Clean the dropped page's media before the slots disappear
     const dropped = deckPages - 1;
     for (let pos = 0; pos < KEY_COUNT; pos++) {
@@ -173,31 +243,7 @@ export default function App() {
       }
     }
     device.sendCommand(encodeCommand({ type: 'SET_PAGES', pages: deckPages - 1 }));
-  }, [device, deckPages]);
-
-  // ── Editing: undo/redo, copy/paste, drag-swap ────────────────
-  const undoActionsRef = useRef(keyActions.actions);
-  undoActionsRef.current = keyActions.actions;
-  const deckOps = useRef({
-    sendCommand: (line: string) => device.sendCommand(line),
-    sendSetImage: (i: number, b: Uint8Array) => device.sendSetImage(i, b),
-    sendAnimation: (i: number, f: Uint8Array[], fps: number) => device.sendAnimation(i, f, fps),
-    deleteSdPath: (p: string) => device.deleteSdPath(p),
-    setAllActions: (a: Parameters<typeof keyActions.setAll>[0]) => keyActions.setAll(a),
-  });
-  deckOps.current.sendCommand = (line) => device.sendCommand(line);
-  deckOps.current.sendSetImage = (i, b) => device.sendSetImage(i, b);
-  deckOps.current.sendAnimation = (i, f, fps) => device.sendAnimation(i, f, fps);
-  deckOps.current.deleteSdPath = (p) => device.deleteSdPath(p);
-  deckOps.current.setAllActions = (a) => keyActions.setAll(a);
-
-  const { checkpoint, undo, redo } = useUndoStack(
-    device.device,
-    undoActionsRef,
-    deckOps.current,
-  );
-
-  const copiedKeyRef = useRef<KeySnapshot | null>(null);
+  }, [device, deckPages, checkpoint]);
 
   const handleSwapKeys = useCallback(
     (fromPos: number, toPos: number) => {
@@ -205,7 +251,14 @@ export default function App() {
       checkpoint(false);
       const a = deckPage * KEY_COUNT + fromPos;
       const b = deckPage * KEY_COUNT + toPos;
-      void swapKeySlots(a, b, device.device, undoActionsRef.current, deckOps.current);
+      void swapKeySlots(
+        a,
+        b,
+        device.device,
+        undoActionsRef.current,
+        undoMultiRef.current,
+        deckOps.current,
+      );
       device.logLocal(`swapped key ${fromPos + 1} ↔ key ${toPos + 1}`);
     },
     [device, deckPage, checkpoint],
@@ -245,25 +298,83 @@ export default function App() {
     [device, showHint],
   );
 
+  // ── Test-mode presses ────────────────────────────────────────
+  // Simulator mode goes through the sim's firmware-twin tap engine. With
+  // real hardware connected, on-screen clicks never reach the firmware, so
+  // the app runs the SAME smart tap rule locally (utils/tapResolver).
+  const testActionsRef = useRef({
+    single: keyActions.actions,
+    double: keyActions.double,
+    triple: keyActions.triple,
+  });
+  testActionsRef.current = {
+    single: keyActions.actions,
+    double: keyActions.double,
+    triple: keyActions.triple,
+  };
+  const deckPageRef = useRef(deckPage);
+  deckPageRef.current = deckPage;
+  const deckPagesRef = useRef(deckPages);
+  deckPagesRef.current = deckPages;
+  const deviceRef = useRef(device);
+  deviceRef.current = device;
+
+  const testTapResolverRef = useRef(
+    createTapResolver((slot, taps) => {
+      const d = deviceRef.current;
+      const store = testActionsRef.current;
+      const level = taps >= 3 ? 'triple' : taps === 2 ? 'double' : 'single';
+      const action = level === 'single' ? store.single[slot] : store[level][slot];
+      if (!action) return;
+      d.logLocal(`test: key ${(slot % KEY_COUNT) + 1} ${level} press`);
+      if (action.type === 'tile') {
+        handleTilePressRef.current(slot);
+        return;
+      }
+      // On-screen presses never hit the firmware, so firmware-owned page
+      // actions are performed over the protocol instead
+      const pages = deckPagesRef.current;
+      const page = deckPageRef.current;
+      if (action.type === 'page_next') {
+        d.sendCommand(encodeCommand({ type: 'SET_PAGE', page: (page + 1) % pages }));
+        return;
+      }
+      if (action.type === 'page_prev') {
+        d.sendCommand(encodeCommand({ type: 'SET_PAGE', page: (page + pages - 1) % pages }));
+        return;
+      }
+      if (action.type === 'page') {
+        if (action.page < pages) {
+          d.sendCommand(encodeCommand({ type: 'SET_PAGE', page: action.page }));
+        }
+        return;
+      }
+      executeAction(action, { log: d.logLocal, slot });
+    }),
+  );
+  useEffect(() => {
+    const resolver = testTapResolverRef.current;
+    return () => resolver.dispose();
+  }, []);
+
+  const handleTestPressRef = useRef<(position: number) => void>(() => {});
+
   /** Test mode: fire a key's action from the app, as if pressed on hardware. */
   const handleTestPress = useCallback(
     (position: number) => {
       if (device.transportMode === 'simulator') {
-        // Full pipeline: sim press → key event → action router
+        // Full pipeline: sim press → tap engine → key event → action router
         device.pressKey(position);
         return;
       }
       const slot = deckPage * KEY_COUNT + position;
-      const action = keyActions.actions[slot];
-      device.logLocal(`test: key ${position + 1} (page ${deckPage + 1}) pressed in app`);
-      if (action?.type === 'tile') {
-        handleTilePressRef.current(slot);
-      } else if (action) {
-        executeAction(action, { log: device.logLocal, slot });
-      }
+      const store = testActionsRef.current;
+      const maxTaps = store.triple[slot] ? 3 : store.double[slot] ? 2 : 1;
+      testTapResolverRef.current.press(slot, maxTaps);
     },
-    [device, keyActions.actions, deckPage],
+    [device, deckPage],
   );
+  handleTestPressRef.current = handleTestPress;
 
   const handleDeckModeChange = useCallback(
     (mode: 'edit' | 'test') => {
@@ -304,8 +415,10 @@ export default function App() {
           }),
         );
       }
-      // Host-side actions travel with the profile (v2); v1 maps to HID
-      keyActions.setAll(profileToActions(data));
+      // Host-side actions travel with the profile (v2); v1 maps to HID.
+      // Multi-tap bindings re-arm the device via the tap-arm effect.
+      const multi = profileToMultiActions(data);
+      keyActions.setAll(profileToActions(data), multi.double, multi.triple);
     },
     [device, keyActions],
   );
@@ -371,7 +484,10 @@ export default function App() {
   const handleCreateProfile = useCallback(() => {
     if (!device.device) return;
     const deckNow = device.device.getState();
-    const data = buildProfile(deckNow.keys, keyActions.actions, deckNow.pages);
+    const data = buildProfile(deckNow.keys, keyActions.actions, deckNow.pages, {
+      double: keyActions.double,
+      triple: keyActions.triple,
+    });
     const media = device.device.getMediaSnapshot();
     const profile = saveProfile(`Profile ${profiles.length + 1}`, data, {
       thumbs: makeThumbs(),
@@ -433,6 +549,8 @@ export default function App() {
   const mediaSigRef = useRef('');
   const keyActionsForSaveRef = useRef(keyActions.actions);
   keyActionsForSaveRef.current = keyActions.actions;
+  const multiForSaveRef = useRef({ double: keyActions.double, triple: keyActions.triple });
+  multiForSaveRef.current = { double: keyActions.double, triple: keyActions.triple };
   useEffect(() => {
     if (!activeProfileId || !device.device) return;
     const sim = device.device;
@@ -443,7 +561,12 @@ export default function App() {
         return;
       }
       const simState = sim.getState();
-      const current = buildProfile(simState.keys, keyActionsForSaveRef.current, simState.pages);
+      const current = buildProfile(
+        simState.keys,
+        keyActionsForSaveRef.current,
+        simState.pages,
+        multiForSaveRef.current,
+      );
       const media = sim.getMediaSnapshot();
       const mediaSig = `${activeProfileId}:${mediaSignature(media)}`;
       const configChanged = JSON.stringify(stored.data) !== JSON.stringify(current);
@@ -463,13 +586,22 @@ export default function App() {
   // ── Action routing + host state feedback ─────────────────────
   const keyActionsRef = useRef(keyActions.actions);
   keyActionsRef.current = keyActions.actions;
+  const multiActionsRef = useRef({ double: keyActions.double, triple: keyActions.triple });
+  multiActionsRef.current = { double: keyActions.double, triple: keyActions.triple };
   const transportModeRef = useRef(device.transportMode);
   transportModeRef.current = device.transportMode;
 
-  // Key press → execute the configured host action (index = global slot)
+  // Key press → execute the action bound to the resolved tap level.
+  // The firmware/simulator already did the smart waiting: single-only keys
+  // arrive instantly with taps=1, multi-tap keys arrive once, resolved.
   useEffect(() => {
-    device.setKeyPressHandler((index) => {
-      const action = keyActionsRef.current[index];
+    device.setKeyPressHandler((index, taps) => {
+      const action =
+        taps >= 3
+          ? multiActionsRef.current.triple[index]
+          : taps === 2
+            ? multiActionsRef.current.double[index]
+            : keyActionsRef.current[index];
       if (!action) return;
       if (action.type === 'tile') {
         handleTilePressRef.current(index); // timer start/stop
@@ -485,10 +617,62 @@ export default function App() {
     return () => device.setKeyPressHandler(null);
   }, [device.setKeyPressHandler, device.logLocal]);
 
+  // Arm multi-tap detection on the device: derive each slot's h2/h3 from its
+  // double/triple actions. HID-mappable actions get their real code (works
+  // standalone); host-only actions get the silent TAP_ARM sentinel so the
+  // firmware waits and reports taps. Unbound = 0 = zero-latency singles.
+  const tapArmSigRef = useRef('');
+  useEffect(() => {
+    const derive = (a: (typeof keyActions.double)[number]): number => {
+      if (!a) return 0;
+      switch (a.type) {
+        case 'hid':
+          return a.code;
+        case 'page_next':
+          return HID_PAGE_NEXT;
+        case 'page_prev':
+          return HID_PAGE_PREV;
+        case 'page':
+          return HID_PAGE_BASE + a.page;
+        default:
+          return HID_TAP_ARM;
+      }
+    };
+    const arm = () => {
+      const wanted = Array.from({ length: TOTAL_KEYS }, (_, i) => ({
+        h2: derive(keyActions.double[i]),
+        h3: derive(keyActions.triple[i]),
+      }));
+      const state = device.device?.getState();
+      wanted.forEach(({ h2, h3 }, i) => {
+        const k = state?.keys[i];
+        if ((k?.hid2 ?? 0) === h2 && (k?.hid3 ?? 0) === h3) return;
+        device.sendCommand(
+          encodeCommand({ type: 'SET_KEY', payload: { index: i, h2, h3 } }),
+        );
+      });
+      return JSON.stringify(wanted);
+    };
+
+    const sig = `${connected}:${JSON.stringify([keyActions.double, keyActions.triple])}`;
+    if (tapArmSigRef.current === sig) return;
+    tapArmSigRef.current = sig;
+
+    if (!connected) return;
+    // On a fresh USB connect, wait for GET_KEYS to fill the mirror before
+    // diffing — otherwise we'd arm against stale state.
+    const timer = setTimeout(arm, device.transportMode === 'webserial' ? 1500 : 0);
+    return () => clearTimeout(timer);
+  }, [keyActions.double, keyActions.triple, device, connected]);
+
   // Plugins: connect the host bridge, then load installed plugins (Tauri)
+  const pluginLogTapRef = useRef<((line: string) => void) | null>(null);
   useEffect(() => {
     pluginHost.connect({
-      log: device.logLocal,
+      log: (line) => {
+        device.logLocal(line);
+        pluginLogTapRef.current?.(line); // debug-channel capture
+      },
       setKeyFace: (slot, face) => {
         device.sendCommand(
           encodeCommand({
@@ -524,6 +708,28 @@ export default function App() {
       },
       plugins: () => pluginHost.list().map((p) => p.id),
       pluginScaffold: (id: string) => pluginHost.scaffold(id),
+      /** Execute a plugin action and return the log lines it produced. */
+      pluginExec: async (actionId: string, settings: Record<string, string>, slot = 0) => {
+        const lines: string[] = [];
+        pluginLogTapRef.current = (l) => lines.push(l);
+        try {
+          await pluginHost.execute(actionId, settings, slot);
+          await new Promise((r) => setTimeout(r, 400)); // async logs settle
+        } finally {
+          pluginLogTapRef.current = null;
+        }
+        return lines;
+      },
+      keyLabel: (slot: number) => {
+        const k = device.device?.getState().keys[slot];
+        return k ? `${k.label} | ${k.sublabel}` : 'no key';
+      },
+      resetRegistry: async () => {
+        const { setRegistryUrl } = await import('./plugins/host');
+        setRegistryUrl(''); // back to the GitHub default
+        const entries = await pluginHost.fetchRegistry();
+        return entries.map((p) => `${p.id}@${p.version}`);
+      },
       pluginUninstall: (id: string) => pluginHost.uninstall(id).then(() => 'ok'),
       pluginInstallFrom: async (registryUrl: string, id: string) => {
         const { getRegistryUrl, setRegistryUrl } = await import('./plugins/host');
@@ -540,7 +746,24 @@ export default function App() {
         }
       },
       pages: () => device.device?.getState().pages,
+      page: () => device.device?.getState().page,
       sdList: (path: string) => device.listSdDir(path),
+      /** Simulate N on-screen Test-mode presses (multi-tap verification). */
+      testPress: async (position: number, count = 1) => {
+        for (let i = 0; i < count; i++) {
+          handleTestPressRef.current(position);
+          if (i < count - 1) await new Promise((r) => setTimeout(r, 120));
+        }
+        return `pressed ${count}x`;
+      },
+      setDouble: (slot: number, type: string) => {
+        keyActions.setAction(
+          slot,
+          'double',
+          type === 'none' ? null : ({ type } as never),
+        );
+        return `double[${slot}] = ${type}`;
+      },
       recoverDeck: async () => {
         const { invoke } = await import('@tauri-apps/api/core');
         const ports = (await invoke('serial_list')) as {
@@ -856,9 +1079,11 @@ export default function App() {
       // Copy / paste a key's full identity (config + action + media)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c' && selectedSlot !== null) {
         if (device.device) {
-          copiedKeyRef.current = takeDeckSnapshot(device.device, keyActionsRef.current).keys[
-            selectedSlot
-          ];
+          copiedKeyRef.current = takeDeckSnapshot(
+            device.device,
+            keyActionsRef.current,
+            multiActionsRef.current,
+          ).keys[selectedSlot];
           device.logLocal(`copied key ${(selectedSlot % KEY_COUNT) + 1}`);
         }
         e.preventDefault();
@@ -872,6 +1097,7 @@ export default function App() {
             selectedSlot,
             device.device,
             keyActionsRef.current,
+            multiActionsRef.current,
             deckOps.current,
           );
           device.logLocal(`pasted onto key ${(selectedSlot % KEY_COUNT) + 1}`);
@@ -942,9 +1168,12 @@ export default function App() {
     [checkpoint, device],
   );
   const editActionChange = useCallback(
-    (a: Parameters<typeof keyActions.setAction>[1]) => {
+    (
+      level: Parameters<typeof keyActions.setAction>[1],
+      a: Parameters<typeof keyActions.setAction>[2],
+    ) => {
       checkpoint();
-      keyActions.setAction(selectedSlot!, a);
+      keyActions.setAction(selectedSlot!, level, a);
     },
     [checkpoint, keyActions, selectedSlot],
   );
@@ -1027,6 +1256,7 @@ export default function App() {
                 page={deckPage}
                 pages={deckPages}
                 maxPages={deckMaxPages}
+                lastPageDirty={lastPageDirty}
                 onPageChange={handlePageChange}
                 onAddPage={handleAddPage}
                 onRemovePage={handleRemovePage}
@@ -1060,6 +1290,7 @@ export default function App() {
                     onExportAll={exportAllProfiles}
                   />
                 )}
+                {activeView === 'plugins' && <PluginsView />}
                 {activeView === 'storage' && (
                   <StorageView
                     connected={connected}
@@ -1097,6 +1328,8 @@ export default function App() {
                   code: defaultKeyForSlot(selectedSlot).hid,
                 }
               }
+              actionDouble={keyActions.double[selectedSlot] ?? null}
+              actionTriple={keyActions.triple[selectedSlot] ?? null}
               onActionChange={editActionChange}
               onSendCommand={editSendCommand}
               onSendSetImage={editSendSetImage}

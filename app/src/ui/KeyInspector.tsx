@@ -22,7 +22,13 @@ interface KeyInspectorProps {
   keyIndex: number;
   device: SimulatedDevice | null;
   action: KeyAction;
-  onActionChange: (action: KeyAction) => void;
+  /** Double / triple press actions — null = unbound (no tap-window latency) */
+  actionDouble: KeyAction | null;
+  actionTriple: KeyAction | null;
+  onActionChange: (
+    level: 'single' | 'double' | 'triple',
+    action: KeyAction | null,
+  ) => void;
   onTestAction: (index: number) => void;
   onSendCommand: (line: string) => void;
   onSendSetImage: (index: number, rgb565: Uint8Array) => Promise<void>;
@@ -71,6 +77,8 @@ export function KeyInspector({
   keyIndex,
   device,
   action,
+  actionDouble,
+  actionTriple,
   onActionChange,
   onTestAction,
   onSendCommand,
@@ -97,7 +105,13 @@ export function KeyInspector({
   const [dragAnim, setDragAnim] = useState(false);
   const [overlayOn, setOverlayOn] = useState(true);
   const [cropFile, setCropFile] = useState<File | null>(null);
+  const [tapLevel, setTapLevel] = useState<'single' | 'double' | 'triple'>('single');
   const rawIconRef = useRef<Uint8Array | null>(null);
+
+  // Selecting another key returns the editor to the single-press action
+  useEffect(() => {
+    setTapLevel('single');
+  }, [keyIndex]);
 
   useEffect(() => {
     if (!device) return;
@@ -428,13 +442,40 @@ export function KeyInspector({
 
         <section className="ins-section">
           <SectionTitle>ACTION</SectionTitle>
-          <ActionEditor
-            action={action}
-            hidFallback={hid}
-            onChange={onActionChange}
-            onHidChange={handleHidChange}
-            onUseAppIcon={handleUseAppIcon}
+          <SegmentedControl
+            options={[
+              { value: 'single' as const, label: 'Press' },
+              { value: 'double' as const, label: 'Double' },
+              { value: 'triple' as const, label: 'Triple' },
+            ]}
+            value={tapLevel}
+            onChange={setTapLevel}
           />
+          {tapLevel !== 'single' && (
+            <p className="tap-level-hint">
+              {tapLevel === 'double' ? 'Double' : 'Triple'}-press action — optional. Keys
+              with one fire single presses after a short tap window; keys without stay
+              instant.
+            </p>
+          )}
+          {tapLevel === 'single' ? (
+            <ActionEditor
+              action={action}
+              hidFallback={hid}
+              onChange={(a) => onActionChange('single', a)}
+              onHidChange={handleHidChange}
+              onUseAppIcon={handleUseAppIcon}
+            />
+          ) : (
+            <ActionEditor
+              action={tapLevel === 'double' ? actionDouble : actionTriple}
+              allowNone
+              hidFallback={hid}
+              onChange={(a) => onActionChange(tapLevel, a)}
+              onHidChange={() => {}}
+              onUseAppIcon={handleUseAppIcon}
+            />
+          )}
           <button
             type="button"
             className="action-test-btn"
@@ -445,7 +486,7 @@ export function KeyInspector({
             </svg>
             Test this action now
           </button>
-          {action.type === 'hid' && (
+          {tapLevel === 'single' && action.type === 'hid' && (
             <>
               <button
                 type="button"
@@ -471,7 +512,7 @@ export function KeyInspector({
                     const code = parseInt(e.target.value, 10);
                     if (!isNaN(code)) {
                       handleHidChange(code);
-                      onActionChange({ type: 'hid', code });
+                      onActionChange('single', { type: 'hid', code });
                     }
                   }}
                 />
