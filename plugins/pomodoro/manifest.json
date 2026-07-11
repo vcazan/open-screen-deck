@@ -1,0 +1,7 @@
+{
+  "id": "pomodoro",
+  "name": "Pomodoro",
+  "version": "1.0.0",
+  "description": "A pomodoro timer that lives on a deck key.",
+  "main": "main.js"
+}

@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web (types · unit · e2e)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Type check
+        working-directory: app
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        working-directory: app
+        run: npm test
+
+      - name: Install Playwright browsers
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+
+      - name: Install ffmpeg (video fixtures)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: E2E tests
+        working-directory: app
+        run: npm run test:e2e
+
+      - name: Upload e2e failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: app/test-results/
+          retention-days: 7
+
+  rust:
+    name: Companion backend (cargo check · test)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: cargo check
+        working-directory: app/src-tauri
+        run: cargo check --locked
+
+      - name: cargo test
+        working-directory: app/src-tauri
+        run: cargo test --locked
+
+  firmware:
+    name: Firmware (arduino-cli compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Cache ESP32 core
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15
+            ~/Arduino/libraries
+          key: arduino-esp32-${{ hashFiles('firmware/main.cpp') }}
+          restore-keys: arduino-esp32-
+
+      - name: Install ESP32 core and libraries
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "Adafruit GFX Library" "Adafruit ST7735 and ST7789 Library"
+
+      - name: Compile
+        run: |
+          mkdir -p /tmp/sketch/open_screen_deck
+          cp firmware/main.cpp /tmp/sketch/open_screen_deck/open_screen_deck.ino
+          arduino-cli compile \
+            -b "esp32:esp32:esp32s3:USBMode=default,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi" \
+            --output-dir /tmp/fw-out \
+            /tmp/sketch/open_screen_deck
+
+      - name: Upload firmware binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-bin
+          path: /tmp/fw-out/*.bin
+          retention-days: 30

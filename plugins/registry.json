@@ -1,0 +1,24 @@
+{
+  "$schema_note": "Plugin registry for the Open Screen Deck companion. The app fetches this file (raw GitHub URL by default, configurable in Settings) and installs plugins by downloading each listed file into its plugin folder.",
+  "version": 1,
+  "plugins": [
+    {
+      "id": "home-assistant",
+      "name": "Home Assistant",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "Fire Home Assistant webhooks from deck keys — pair with webhook-triggered automations.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/home-assistant",
+      "files": ["manifest.json", "main.js"]
+    },
+    {
+      "id": "pomodoro",
+      "name": "Pomodoro",
+      "version": "1.0.0",
+      "author": "Open Screen Deck",
+      "description": "A pomodoro timer that lives on a deck key — press to start, key face counts down.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/pomodoro",
+      "files": ["manifest.json", "main.js"]
+    }
+  ]
+}

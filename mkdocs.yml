@@ -91,6 +91,7 @@ extra:
       name: Discord
 
 not_in_nav: |
+  software_plan.md
   assembly.md
   protocol.md
   mechanical_contract.md

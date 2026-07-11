@@ -1,0 +1,529 @@
+.deck-stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  position: relative;
+  background: radial-gradient(120% 90% at 50% 30%, rgba(47, 212, 196, 0.05), transparent 60%);
+  overflow: hidden;
+}
+
+.deck-container {
+  position: relative;
+  transition: transform var(--dur-panel) var(--ease-panel);
+  transform-origin: center;
+}
+
+/* Toggle + hint column pinned to the top of the stage */
+.deck-controls {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.deck-controls > * {
+  pointer-events: auto;
+}
+
+/* Edit / Test mode toggle */
+.deck-mode-toggle {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: #070a0d;
+  border: 1px solid var(--border-hairline);
+  border-radius: 11px;
+}
+
+/* Page tabs — which of the 4 pages the six screens are showing */
+.deck-pages {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: #070a0d;
+  border: 1px solid var(--border-hairline);
+  border-radius: 10px;
+}
+
+.deck-page-btn {
+  width: 30px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  transition:
+    background var(--dur-micro) var(--ease-micro),
+    color var(--dur-micro) var(--ease-micro),
+    transform var(--dur-micro) var(--ease-micro);
+}
+
+.deck-page-btn:hover:not(.active) {
+  color: var(--text-muted);
+}
+
+.deck-page-btn:active {
+  transform: scale(0.94);
+}
+
+.deck-page-btn.active {
+  background: rgba(47, 212, 196, 0.15);
+  color: var(--accent-soft);
+}
+
+.deck-page-btn.deck-page-edit {
+  width: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-ghost);
+}
+
+.deck-page-btn.deck-page-edit:hover {
+  color: var(--accent-soft);
+  background: rgba(47, 212, 196, 0.1);
+}
+
+.deck-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--text-muted);
+  animation: hint-float-y 2.5s ease-in-out infinite;
+  pointer-events: none !important;
+}
+
+@keyframes hint-float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.deck-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  transition:
+    background var(--dur-micro) var(--ease-micro),
+    color var(--dur-micro) var(--ease-micro);
+}
+
+.deck-mode-btn:hover:not(.active) {
+  color: var(--text-muted);
+}
+
+.deck-mode-btn.active {
+  background: rgba(47, 212, 196, 0.15);
+  color: var(--accent-soft);
+  font-weight: 700;
+}
+
+.deck-shadow {
+  position: absolute;
+  bottom: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 130%);
+  height: 60px;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Device body — brushed slab */
+.deck {
+  position: relative;
+  padding: 26px 26px 20px;
+  border-radius: 26px;
+  background: linear-gradient(168deg, #2a2f37 0%, #181b21 42%, #101318 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 40px 80px -24px rgba(0, 0, 0, 0.8),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+/* Inner screen bezel */
+.deck-bezel {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #050607, #0a0c0f);
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.9),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  transition: grid-template-columns var(--dur-panel) var(--ease-panel);
+}
+
+.deck-grid.landscape {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Nameplate */
+.deck-nameplate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 6px 2px;
+}
+
+.deck-nameplate-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #5a616b;
+}
+
+.deck-nameplate-led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  animation: deck-led-glow 3s ease-in-out infinite;
+}
+
+@keyframes deck-led-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* ── USB-C port + cable indicator ──────────────────────────────
+   Follows the deck's physical rear edge through every orientation, so you
+   always know which way the cable runs. */
+.deck-usb {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  pointer-events: auto;
+  animation: usb-pop 0.35s var(--ease-panel);
+}
+
+@keyframes usb-pop {
+  from {
+    opacity: 0;
+    transform: var(--usb-transform, translateX(-50%)) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: var(--usb-transform, translateX(-50%)) scale(1);
+  }
+}
+
+/* Connector housing — looks plugged into the slab edge */
+.usb-port {
+  background: linear-gradient(180deg, #21262d, #0d1013);
+  border: 1px solid #3a414b;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Inner slot */
+.usb-port::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  background: #05070a;
+  border-radius: 2px;
+}
+
+/* Cable stub fading away from the deck */
+.usb-cable {
+  flex-shrink: 0;
+  border-radius: 3px;
+  transition: background var(--dur-panel) var(--ease-panel);
+}
+
+/* Horizontal edges (top / bottom): wide port, vertical cable */
+.usb-top .usb-port,
+.usb-bottom .usb-port {
+  width: 34px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.usb-top .usb-port::after,
+.usb-bottom .usb-port::after {
+  width: 20px;
+  height: 4px;
+}
+
+.usb-top .usb-cable,
+.usb-bottom .usb-cable {
+  width: 5px;
+  height: 26px;
+}
+
+/* Vertical edges (left / right): tall port, horizontal cable */
+.usb-left .usb-port,
+.usb-right .usb-port {
+  width: 12px;
+  height: 34px;
+  border-radius: 6px;
+}
+
+.usb-left .usb-port::after,
+.usb-right .usb-port::after {
+  width: 4px;
+  height: 20px;
+}
+
+.usb-left .usb-cable,
+.usb-right .usb-cable {
+  width: 26px;
+  height: 5px;
+}
+
+/* Placement per edge — port kisses the slab, cable runs outward */
+.deck-usb.usb-top {
+  --usb-transform: translateX(-50%);
+  left: 50%;
+  bottom: calc(100% - 4px);
+  transform: translateX(-50%);
+  flex-direction: column;
+}
+
+.usb-top .usb-cable {
+  background: linear-gradient(0deg, #3a414b, transparent 85%);
+}
+
+.deck-usb.usb-bottom {
+  --usb-transform: translateX(-50%);
+  left: 50%;
+  top: calc(100% - 4px);
+  transform: translateX(-50%);
+  flex-direction: column-reverse;
+}
+
+.usb-bottom .usb-cable {
+  background: linear-gradient(180deg, #3a414b, transparent 85%);
+}
+
+.deck-usb.usb-left {
+  --usb-transform: translateY(-50%);
+  top: 50%;
+  right: calc(100% - 4px);
+  transform: translateY(-50%);
+  flex-direction: row;
+}
+
+.usb-left .usb-cable {
+  background: linear-gradient(270deg, #3a414b, transparent 85%);
+}
+
+.deck-usb.usb-right {
+  --usb-transform: translateY(-50%);
+  top: 50%;
+  left: calc(100% - 4px);
+  transform: translateY(-50%);
+  flex-direction: row-reverse;
+}
+
+.usb-right .usb-cable {
+  background: linear-gradient(90deg, #3a414b, transparent 85%);
+}
+
+/* Live: teal current running through the cable while USB is connected */
+.deck-usb.live .usb-port {
+  border-color: rgba(47, 212, 196, 0.55);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.8),
+    0 0 10px rgba(47, 212, 196, 0.35);
+}
+
+.usb-top.live .usb-cable {
+  background: linear-gradient(0deg, var(--accent), rgba(47, 212, 196, 0.05) 90%);
+}
+
+.usb-bottom.live .usb-cable {
+  background: linear-gradient(180deg, var(--accent), rgba(47, 212, 196, 0.05) 90%);
+}
+
+.usb-left.live .usb-cable {
+  background: linear-gradient(270deg, var(--accent), rgba(47, 212, 196, 0.05) 90%);
+}
+
+.usb-right.live .usb-cable {
+  background: linear-gradient(90deg, var(--accent), rgba(47, 212, 196, 0.05) 90%);
+}
+
+.deck-usb.live .usb-cable {
+  animation: usb-flow 2.4s ease-in-out infinite;
+}
+
+@keyframes usb-flow {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Key cap */
+.key-cap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  border-radius: 13px;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  background: #101318;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 3px 8px rgba(0, 0, 0, 0.5);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition:
+    transform 0.14s var(--ease-micro),
+    box-shadow 0.14s var(--ease-micro),
+    outline-color var(--dur-panel) var(--ease-panel);
+}
+
+.key-cap:hover {
+  transform: translateY(-1px);
+}
+
+.key-cap.selected {
+  outline-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 2px #0a0c0f,
+    0 10px 26px -6px rgba(0, 0, 0, 0.6),
+    0 0 28px -2px rgba(47, 212, 196, 0.55);
+}
+
+.key-cap.pressed {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Drag-to-swap: the lifted key floats, the target invites the drop */
+.key-cap.dragging {
+  opacity: 0.45;
+  transform: scale(0.94);
+  outline-color: var(--border-hairline);
+}
+
+.key-cap.drop-target {
+  outline-color: var(--accent);
+  transform: translateY(-4px) scale(1.04);
+  box-shadow:
+    0 0 0 2px #0a0c0f,
+    0 14px 30px -6px rgba(0, 0, 0, 0.65),
+    0 0 32px 0 rgba(47, 212, 196, 0.6);
+}
+
+.key-cap.drop-target .key-screen canvas {
+  filter: brightness(1.15);
+}
+
+.key-cap.pressed .key-screen canvas {
+  filter: brightness(0.85);
+}
+
+.key-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.key-screen canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: filter var(--dur-micro) var(--ease-micro);
+}
+
+.key-cap:hover .key-screen canvas {
+  filter: brightness(1.05);
+}
+
+.key-hid-chip {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  padding: 4px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-soft);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: chip-rise 900ms var(--ease-panel) forwards;
+  z-index: 5;
+}
+
+@keyframes chip-rise {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-16px);
+  }
+}
+
+.hint-arrow {
+  color: var(--accent);
+  font-size: 16px;
+  animation: hint-arrow 2.5s ease-in-out infinite;
+}
+
+@keyframes hint-arrow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}

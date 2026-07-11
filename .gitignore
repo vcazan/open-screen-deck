@@ -31,3 +31,11 @@ __pycache__/
 # ── docs build ──
 site/
 .venv-docs/
+
+# ── app ──
+node_modules/
+app/dist/
+
+# Tauri build artifacts
+app/src-tauri/target/
+app/src-tauri/gen/

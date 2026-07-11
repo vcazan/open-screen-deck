@@ -1,0 +1,316 @@
+/* First-run wizard — a warm front door, not a form */
+
+.onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 7, 9, 0.78);
+  backdrop-filter: blur(10px);
+  animation: onboarding-fade 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes onboarding-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.onboarding-card {
+  width: min(540px, calc(100vw - 48px));
+  padding: 34px 38px 30px;
+  border-radius: 20px;
+  background: linear-gradient(172deg, #14181e 0%, #0d1014 100%);
+  border: 1px solid var(--border-hairline);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.9);
+  animation: onboarding-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes onboarding-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.onboarding-progress {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 24px;
+}
+
+.onboarding-dot {
+  width: 22px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg3);
+  transition: background 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onboarding-dot.active {
+  background: var(--accent);
+}
+
+.onboarding-step h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-bright);
+}
+
+.onboarding-step p {
+  margin: 0 0 22px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.onboarding-step {
+  animation: onboarding-step-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@keyframes onboarding-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Welcome hero: a tiny deck that lights up key by key */
+.onboarding-hero {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.onboarding-minideck {
+  display: grid;
+  grid-template-columns: repeat(2, 44px);
+  gap: 7px;
+  padding: 13px;
+  border-radius: 14px;
+  background: linear-gradient(168deg, #262b33, #14171c);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.onboarding-minideck span {
+  height: 44px;
+  border-radius: 8px;
+  background: #0c0f13;
+  animation: minideck-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes minideck-glow {
+  0%,
+  100% {
+    background: #0c0f13;
+  }
+  22% {
+    background: rgba(47, 212, 196, 0.55);
+    box-shadow: 0 0 14px rgba(47, 212, 196, 0.5);
+  }
+  44% {
+    background: #0c0f13;
+  }
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.onboarding-next {
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #04211d;
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0, 0, 1),
+    filter 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.onboarding-next:hover {
+  filter: brightness(1.1);
+}
+
+.onboarding-next:active {
+  transform: scale(0.97);
+}
+
+.onboarding-next:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.onboarding-skip {
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.onboarding-skip:hover {
+  color: var(--text-muted);
+}
+
+/* Accessibility status */
+.onboarding-ax {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  margin-bottom: 20px;
+  border-radius: 11px;
+  background: var(--bg2);
+  border: 1px solid var(--border-hairline);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onboarding-ax.granted {
+  border-color: rgba(47, 212, 196, 0.4);
+  color: var(--accent-soft);
+}
+
+.onboarding-ax-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-ghost);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.onboarding-ax.granted .onboarding-ax-dot {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(47, 212, 196, 0.7);
+}
+
+/* Starter profile cards */
+.onboarding-profiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+  margin-bottom: 22px;
+}
+
+.onboarding-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 13px;
+  text-align: left;
+  background: var(--bg2);
+  border: 1px solid var(--border-hairline);
+  transition:
+    border-color 0.15s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.15s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.onboarding-profile:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+
+.onboarding-profile.picked {
+  border-color: var(--accent);
+  box-shadow: 0 0 22px -4px rgba(47, 212, 196, 0.45);
+}
+
+.onboarding-profile-swatches {
+  display: grid;
+  grid-template-columns: repeat(2, 14px);
+  gap: 3px;
+}
+
+.onboarding-profile-swatches i {
+  height: 14px;
+  border-radius: 3.5px;
+}
+
+.onboarding-profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.onboarding-profile-desc {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+/* Completion */
+.onboarding-done {
+  text-align: center;
+}
+
+.onboarding-done .onboarding-actions {
+  justify-content: center;
+}
+
+/* Full-screen celebration (first hardware connect, easter egg) */
+.celebration-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12vh;
+}
+
+.celebration-layer .confetti-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.celebration-text {
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: rgba(13, 17, 21, 0.92);
+  border: 1px solid rgba(47, 212, 196, 0.4);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-soft);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  animation: onboarding-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.confetti-canvas {
+  position: absolute;
+  inset: -60px -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 120px);
+  pointer-events: none;
+}

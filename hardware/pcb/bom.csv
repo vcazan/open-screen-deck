@@ -1,6 +1,6 @@
 Reference,Value,Footprint,Qty,MPN,Supplier,Notes
-H1-H4,MountingHole 3.2mm,MountingHole:MountingHole_3.2mm_M3,4,,,M3 case screws pass through @ (4 4) (51 4) (4 108) (51 108)
-J1-J6,Molex PicoBlade 9P right-angle,Connector_Molex:Molex_PicoBlade_53261-0971_1x09-1MP_P1.25mm_Horizontal,6,53261-0971,Molex,Same MX1.25/PicoBlade family as the module connector; in-box cable plugs in; pin1=KEY
+H1-H4,MountingHole 2.2mm,MountingHole:MountingHole_2.2mm_M2,4,,,M2x25 corner case screws pass through @ (2 4.95) (52.9 4.95) (2 106.85) (52.9 106.85) into the corner-module nuts
+J1-J6,Molex PicoBlade 9P right-angle,Connector_Molex:Molex_PicoBlade_53261-0971_1x09-1MP_P1.25mm_Horizontal,6,53261-0971,Molex,Same MX1.25/PicoBlade family as the module connector; in-box cable plugs in; pin1=KEY. Verified alternate: HDGC HDGC1251WR-S-9P (SMT PicoBlade clone; JLC-stocked)
 J7,USB-C receptacle,Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal,1,USB4105-GF-A,GCT,Horizontal top-mount; port exits rear board edge @ X=27.5mm
 J8,microSD push-push,Connector_Card:microSD_HC_Hirose_DM3D-SF,1,DM3D-SF,Hirose,Card ejects right board edge @ Y=75mm
 U1,ESP32-S3-WROOM-1-N16R8,RF_Module:ESP32-S3-WROOM-1,1,ESP32-S3-WROOM-1-N16R8,Espressif,16MB flash 8MB PSRAM native USB

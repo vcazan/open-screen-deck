@@ -1,0 +1,7 @@
+{
+  "id": "home-assistant",
+  "name": "Home Assistant",
+  "version": "1.0.0",
+  "description": "Fire Home Assistant webhooks from deck keys.",
+  "main": "main.js"
+}
