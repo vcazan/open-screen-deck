@@ -56,14 +56,19 @@ test.describe('pro editing: swap, copy/paste, undo/redo', () => {
   test('undo reverts a label edit as one step', async ({ page }) => {
     await selectKey(page, 2);
     await page.locator('.field-input').first().fill('UNDOME');
-    await page.waitForTimeout(1600); // past the coalesce window
+    await page.waitForTimeout(2000); // well past the coalesce window (slow CI)
     await page.keyboard.press('Escape');
     await page.keyboard.press('Meta+z');
-    await page.waitForTimeout(1000);
-    const nvs = await page.evaluate(() =>
-      JSON.parse(localStorage.getItem('osd-simulator-nvs-v2') ?? '[]'),
-    );
-    expect(nvs[2].label).toBe('SCENE 2');
+    // Undo replays a full deck snapshot — poll instead of a fixed wait
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(
+            () => JSON.parse(localStorage.getItem('osd-simulator-nvs-v2') ?? '[]'),
+          ))[2]?.label,
+        { timeout: 5000 },
+      )
+      .toBe('SCENE 2');
   });
 
   test('copy a key and paste it onto another', async ({ page }) => {
