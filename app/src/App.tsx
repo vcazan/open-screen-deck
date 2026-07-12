@@ -1346,16 +1346,45 @@ export default function App() {
         fwVersion={fwVersion}
         miniKeyColors={miniKeyColors}
         profileCount={profiles.length}
+        activeProfile={(() => {
+          const p = profiles.find((x) => x.id === activeProfileId);
+          return p
+            ? {
+                name: p.name,
+                pages: Math.max(1, Math.ceil(p.data.keys.length / 6)),
+                updatedAt: p.updatedAt,
+                hasMedia: !!p.hasMedia,
+              }
+            : null;
+        })()}
+        mediaStats={(() => {
+          const media = device.device?.getState().media ?? [];
+          return {
+            icons: media.filter((m) => m.hasIcon).length,
+            anims: media.filter((m) => m.animFrames > 0).length,
+          };
+        })()}
         showTxFilter={showTx}
         showRxFilter={showRx}
         onTxFilterChange={setShowTx}
         onRxFilterChange={setShowRx}
+        onClearConsole={device.clearConsole}
         onModeChange={handleModeChange}
         onConnect={device.connect}
         onDisconnect={device.disconnect}
         onSaveProfile={handleCreateProfile}
         onLoadProfile={handleLoadProfile}
+        onImportProfiles={handleImportProfiles}
+        onExportAll={exportAllProfiles}
         onResetDefaults={handleReset}
+        onCheckPluginUpdates={async () => {
+          const updates = await pluginHost.checkForUpdates();
+          if (updates.length > 0) {
+            localStorage.removeItem(UPDATE_DISMISS_KEY);
+            setPluginUpdates(updates);
+          }
+          return updates.length;
+        }}
         micMuted={micMuted}
         onSimToggleMic={
           device.transportMode === 'simulator' ? () => setMicMuted((m) => !m) : undefined
