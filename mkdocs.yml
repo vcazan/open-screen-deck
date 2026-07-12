@@ -29,7 +29,6 @@ theme:
     text: Space Grotesk
     code: IBM Plex Mono
   features:
-    - navigation.tabs
     - navigation.indexes
     - navigation.expand
     - navigation.top
