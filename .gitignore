@@ -39,3 +39,6 @@ app/dist/
 # Tauri build artifacts
 app/src-tauri/target/
 app/src-tauri/gen/
+
+# arduino-cli in-tree build cache
+firmware/build/

@@ -20,7 +20,7 @@ npm run build    # production bundle
 app/src/
 ├── protocol/       # Serial protocol v0.4 — types, codec, RGB565 helpers
 ├── transport/      # Transport abstraction (simulator loopback + Web Serial)
-├── simulator/      # Virtual firmware mirroring main.cpp behavior
+├── simulator/      # Virtual firmware mirroring firmware/ behavior
 ├── ui/             # React components (deck, inspector, console)
 ├── hooks/          # Device connection state management
 └── utils/          # Profile import/export, animation decoding
@@ -49,7 +49,7 @@ All device I/O goes through a `Transport` interface so the app can later be wrap
 
 `SimulatedDevice` is a faithful virtual firmware:
 
-- 6 keys with label view renderer matching `drawKey()` in `firmware/main.cpp`
+- 6 keys with label view renderer matching `drawKey()` in `firmware/display.cpp`
 - Handles every protocol command identically to the ESP32 firmware
 - Key presses emit `{"event":"key",...}` and simulate HID keystrokes
 - NVS persistence via `localStorage` (survives page reload)

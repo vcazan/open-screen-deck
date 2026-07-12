@@ -1,5 +1,5 @@
 /**
- * SimulatedDevice — in-process virtual firmware mirroring main.cpp behavior.
+ * SimulatedDevice — in-process virtual firmware mirroring the firmware/ modules.
  * No React dependencies.
  */
 

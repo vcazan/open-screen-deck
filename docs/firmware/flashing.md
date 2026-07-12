@@ -28,7 +28,9 @@ In Arduino IDE, select:
 
 ## Upload
 
-1. Open `firmware/main.cpp` in the Arduino IDE.
+1. Open `firmware/firmware.ino` in the Arduino IDE (the sketch pulls in
+   the rest of the `firmware/` modules automatically) — or skip the IDE
+   entirely with `./scripts/build_firmware.sh --flash`.
 2. Hold **BOOT**, tap **RESET**, release **BOOT** — the board enters download mode.
 3. Upload the sketch.
 

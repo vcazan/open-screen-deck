@@ -1,4 +1,4 @@
-/** Canonical device constants — mirrors firmware/main.cpp */
+/** Canonical device constants — mirrors firmware/config.h */
 
 export const KEY_COUNT = 6; // physical screens/switches
 /** Storage ceiling — decks have 1..MAX_PAGES pages, user-controlled */
@@ -91,7 +91,7 @@ export interface DefaultKeyConfig {
   icon: string;
 }
 
-/** Default key configs — labels/HID mirror keys[] in firmware/main.cpp */
+/** Default key configs — labels/HID mirror keys[] in firmware/state.cpp */
 export const DEFAULT_KEYS: DefaultKeyConfig[] = [
   { label: 'MUTE', sublabel: 'Toggle', hid: HID_F13, bg: 0x1ce9, fg: ST77XX_WHITE, icon: 'mute' },
   { label: 'SCENE 1', sublabel: 'OBS', hid: HID_F14, bg: 0x2a7c, fg: ST77XX_WHITE, icon: 'camera' },
