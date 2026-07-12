@@ -1,4 +1,6 @@
 :root {
+  /* Native widgets (select popups, scrollbars, color pickers) render dark */
+  color-scheme: dark;
   --bg0: #0b0d10;
   --bg-rail: #0c0f13;
   --bg-side: #0e1116;

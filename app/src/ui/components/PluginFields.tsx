@@ -27,7 +27,7 @@ export function PluginFields({ fields, values, onChange, onCommit }: PluginField
               <label key={f.key} className="field">
                 <span className="field-label">{f.label}</span>
                 <select
-                  className="plugin-field-select"
+                  className="action-type-select plugin-field-select"
                   value={value}
                   onChange={(e) => {
                     onChange(f.key, e.target.value);
