@@ -1,0 +1,8 @@
+{
+  "id": "obs-control",
+  "name": "OBS Control",
+  "version": "1.1.0",
+  "description": "Scenes, streaming, and recording over obs-websocket. Connection managed in the plugin's settings; keys track live state.",
+  "main": "main.js",
+  "icon": "icon.svg"
+}

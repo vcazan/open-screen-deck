@@ -1,7 +1,8 @@
 {
   "id": "philips-hue",
   "name": "Philips Hue",
-  "version": "1.0.0",
-  "description": "Toggle Hue lights and rooms from deck keys — talks to your bridge directly.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "The key is the bulb \u2014 glows warm when the light is on. Press to toggle lights or rooms.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

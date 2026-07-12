@@ -1,7 +1,8 @@
 {
   "id": "text-snippet",
   "name": "Text Snippets",
-  "version": "1.0.0",
-  "description": "Type canned text into whatever app has focus — emails, replies, emotes.",
-  "main": "main.js"
+  "version": "2.1.0",
+  "description": "Types canned text into the focused app. Keys wear a quote face with a preview of the snippet.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

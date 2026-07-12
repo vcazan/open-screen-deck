@@ -38,6 +38,8 @@ pub struct LoadedPlugin {
     pub manifest: serde_json::Value,
     pub code: String,
     pub dir: String,
+    /// SVG icon source (manifest `icon` file), if the plugin ships one
+    pub icon: Option<String>,
 }
 
 #[tauri::command]
@@ -200,8 +202,15 @@ pub fn plugin_scaffold(app: tauri::AppHandle, id: String) -> Result<String, Stri
     }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let manifest = format!(
-        "{{\n  \"id\": \"{id}\",\n  \"name\": \"{id}\",\n  \"version\": \"0.1.0\",\n  \"description\": \"My Open Screen Deck plugin.\",\n  \"main\": \"main.js\"\n}}\n"
+        "{{\n  \"id\": \"{id}\",\n  \"name\": \"{id}\",\n  \"version\": \"0.1.0\",\n  \"description\": \"My Open Screen Deck plugin.\",\n  \"main\": \"main.js\",\n  \"icon\": \"icon.svg\"\n}}\n"
     );
+    // Starter icon — replace the glyph with something that says what the
+    // plugin does (any 24×24 path works; MDI is a good source).
+    let icon = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 32 32">
+  <rect x="-4" y="-4" width="32" height="32" rx="8" fill="#1a222c"/>
+  <path d="M20.5,11H19V7C19,5.89 18.1,5 17,5H13V3.5A2.5,2.5 0 0,0 10.5,1A2.5,2.5 0 0,0 8,3.5V5H4A2,2 0 0,0 2,7V10.8H3.5C5,10.8 6.2,12 6.2,13.5C6.2,15 5,16.2 3.5,16.2H2V20A2,2 0 0,0 4,22H7.8V20.5C7.8,19 9,17.8 10.5,17.8C12,17.8 13.2,19 13.2,20.5V22H17A2,2 0 0,0 19,20V16H20.5A2.5,2.5 0 0,0 23,13.5A2.5,2.5 0 0,0 20.5,11Z" fill="#2fd4c4"/>
+</svg>
+"##;
     let main = format!(
         r#"// {id} — Open Screen Deck plugin.
 // Edit, then Settings → Plugins → Reload to pick up changes.
@@ -214,9 +223,23 @@ export function activate(api) {{
     fields: [
       {{ key: 'message', label: 'Message', placeholder: 'Hello from my plugin!' }},
     ],
+    // Runs when the action is assigned to a key — paint your branded face.
+    // ctx.setKeyImage(canvas) persists it; ctx.paintFace(canvas) streams a
+    // live frame over it (great for data that changes).
+    async onAssign(settings, ctx) {{
+      const c = document.createElement('canvas');
+      c.width = c.height = 128;
+      const g = c.getContext('2d');
+      g.fillStyle = '#16303a';
+      g.fillRect(0, 0, 128, 128);
+      g.fillStyle = '#2fd4c4';
+      g.font = '700 20px system-ui';
+      g.textAlign = 'center';
+      g.fillText('HELLO', 64, 70);
+      await ctx.setKeyImage(c);
+    }},
     execute(settings, ctx) {{
       ctx.log(settings.message || 'Hello from {id}!');
-      ctx.setKeyFace(ctx.slot, {{ label: 'HI', sublabel: '{id}', bg: 0x1c73 }});
     }},
   }});
 
@@ -226,6 +249,7 @@ export function activate(api) {{
     );
     std::fs::write(dir.join("manifest.json"), manifest).map_err(|e| e.to_string())?;
     std::fs::write(dir.join("main.js"), main).map_err(|e| e.to_string())?;
+    std::fs::write(dir.join("icon.svg"), icon).map_err(|e| e.to_string())?;
     Ok(dir.to_string_lossy().to_string())
 }
 
@@ -258,11 +282,16 @@ pub fn plugins_list(app: tauri::AppHandle) -> Result<Vec<LoadedPlugin>, String> 
             .as_str()
             .map(str::to_string)
             .unwrap_or_else(|| entry.file_name().to_string_lossy().to_string());
+        let icon = manifest["icon"]
+            .as_str()
+            .filter(|name| safe_name(name).is_ok() && name.ends_with(".svg"))
+            .and_then(|name| std::fs::read_to_string(path.join(name)).ok());
         out.push(LoadedPlugin {
             id,
             manifest,
             code,
             dir: path.to_string_lossy().to_string(),
+            icon,
         });
     }
     Ok(out)

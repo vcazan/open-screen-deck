@@ -16,9 +16,10 @@ import {
   type StateFace,
   type TileKind,
 } from '../actions/types';
-import { useEffect, useState } from 'react';
 import { isTauri } from '../transport/TauriSerialTransport';
-import { pluginHost } from '../plugins/host';
+import { fieldDefaults, getActionDefaults, pluginHost } from '../plugins/host';
+import { ActionPicker, type PickerValue } from './components/ActionPicker';
+import { PluginFields } from './components/PluginFields';
 import { AppPicker } from './components/AppPicker';
 import { HotkeyInput } from './components/HotkeyInput';
 import { Input } from './components/Input';
@@ -34,21 +35,6 @@ interface ActionEditorProps {
   /** Apply an app's icon (PNG data URL) as the key image. */
   onUseAppIcon?: (dataUrl: string, appName: string) => void;
 }
-
-const EDITOR_TYPES: KeyActionType[] = [
-  'hid',
-  'hotkey',
-  'launch',
-  'open_url',
-  'shell',
-  'mic_mute',
-  'obs_scene',
-  'page_next',
-  'page_prev',
-  'page',
-  'tile',
-  'multi',
-];
 
 /** Macro steps use the single-param action types only. */
 const MACRO_STEP_TYPES: KeyActionType[] = ['hotkey', 'launch', 'open_url', 'shell', 'mic_mute'];
@@ -138,17 +124,28 @@ export function ActionEditor({
   const meta = action ? ACTION_TYPE_META[action.type] : null;
   const companionMissing = (meta?.needsCompanion ?? false) && !isTauri();
 
-  // Plugin-contributed action types join the picker live
-  const [pluginActions, setPluginActions] = useState(pluginHost.list());
-  useEffect(() => pluginHost.onChange(() => setPluginActions(pluginHost.list())), []);
-
-  const changeType = (value: string) => {
+  const changeType = (value: PickerValue) => {
     if (value === 'none') {
       onChange(null);
       return;
     }
     if (value.startsWith('plugin:')) {
-      onChange({ type: 'plugin', plugin: value.slice(7), settings: {} });
+      const actionId = value.slice(7);
+      // New plugin keys start from the plugin's declared field defaults,
+      // overridden by any defaults the user saved on the plugin's page
+      const spec = pluginHost.get(actionId);
+      onChange({
+        type: 'plugin',
+        plugin: actionId,
+        settings: {
+          ...(spec ? fieldDefaults(spec.fields) : {}),
+          ...getActionDefaults(actionId),
+        },
+      });
+      return;
+    }
+    if (value.startsWith('tile:')) {
+      onChange({ type: 'tile', kind: value.slice(5) as TileKind });
       return;
     }
     const type = value as KeyActionType;
@@ -160,41 +157,12 @@ export function ActionEditor({
     else if (type === 'page') onHidChange(HID_PAGE_BASE);
   };
 
-  const selectValue = !action
-    ? 'none'
-    : action.type === 'plugin' && action.plugin
-      ? `plugin:${action.plugin}`
-      : action.type;
   const pluginSpec =
     action?.type === 'plugin' ? pluginHost.get(action.plugin) : undefined;
 
   return (
     <div className="action-editor">
-      <select
-        className="action-type-select"
-        value={selectValue}
-        onChange={(e) => changeType(e.target.value)}
-        aria-label="Action type"
-      >
-        {allowNone && <option value="none">None — key stays instant</option>}
-        {EDITOR_TYPES.filter((t) => t !== 'plugin').map((t) => (
-          <option key={t} value={t}>
-            {ACTION_TYPE_META[t].label}
-          </option>
-        ))}
-        {pluginActions.length > 0 && (
-          <optgroup label="Plugins">
-            {pluginActions.map((p) => (
-              <option key={p.id} value={`plugin:${p.id}`}>
-                {p.label} · {p.pluginName}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {action?.type === 'plugin' && !pluginSpec && (
-          <option value={selectValue}>{action.plugin} (not installed)</option>
-        )}
-      </select>
+      <ActionPicker action={action} allowNone={allowNone} onPick={changeType} />
 
       {action === null ? (
         <p className="action-hint">
@@ -204,7 +172,9 @@ export function ActionEditor({
         <p className={`action-hint ${companionMissing ? 'warn' : ''}`}>
           {companionMissing
             ? 'Needs the desktop companion app — in the browser this action only dry-runs.'
-            : meta?.hint}
+            : action.type === 'tile'
+              ? TILE_KIND_META[action.kind].hint
+              : meta?.hint}
         </p>
       )}
 
@@ -272,42 +242,25 @@ export function ActionEditor({
 
       {action?.type === 'plugin' && pluginSpec && (
         <div className="field">
+          <div className="plugin-action-brand">
+            {pluginSpec.pluginIcon && (
+              <img src={pluginSpec.pluginIcon} alt="" draggable={false} />
+            )}
+            <span>
+              {pluginSpec.label} · {pluginSpec.pluginName}
+            </span>
+          </div>
           {pluginSpec.hint && <span className="action-hint">{pluginSpec.hint}</span>}
-          {pluginSpec.fields.map((f) => (
-            <Input
-              key={f.key}
-              label={f.label}
-              placeholder={f.placeholder}
-              value={action.settings[f.key] ?? ''}
-              onChange={(e) =>
-                onChange({
-                  ...action,
-                  settings: { ...action.settings, [f.key]: e.target.value },
-                })
-              }
-            />
-          ))}
+          <PluginFields
+            fields={pluginSpec.fields}
+            values={action.settings}
+            onChange={(key, value) =>
+              onChange({ ...action, settings: { ...action.settings, [key]: value } })
+            }
+          />
         </div>
       )}
 
-      {action?.type === 'tile' && (
-        <div className="field">
-          <span className="field-label">Tile</span>
-          <select
-            className="action-type-select"
-            value={action.kind}
-            onChange={(e) => onChange({ type: 'tile', kind: e.target.value as TileKind })}
-            aria-label="Tile kind"
-          >
-            {(Object.keys(TILE_KIND_META) as TileKind[]).map((k) => (
-              <option key={k} value={k}>
-                {TILE_KIND_META[k].label}
-              </option>
-            ))}
-          </select>
-          <span className="action-hint">{TILE_KIND_META[action.kind].hint}</span>
-        </div>
-      )}
 
       {action?.type === 'page' && (
         <div className="field">

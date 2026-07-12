@@ -1,7 +1,8 @@
 {
   "id": "screenshot",
   "name": "Screenshot",
-  "version": "1.0.0",
-  "description": "Capture the screen, a window, or an area — to clipboard or a folder.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "A camera key that flashes when it fires. Screen, area, or window \u2014 to clipboard or a folder.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

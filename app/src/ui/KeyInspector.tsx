@@ -16,7 +16,7 @@ import { Button } from './components/Button';
 import { ImageCropper } from './components/ImageCropper';
 import { Input } from './components/Input';
 import { SegmentedControl } from './components/SegmentedControl';
-import { KEY_ICONS, KEY_ICON_ORDER } from './icons';
+import { IconPicker } from './components/IconPicker';
 
 interface KeyInspectorProps {
   keyIndex: number;
@@ -158,6 +158,34 @@ export function KeyInspector({
     clearKeyMediaImage(keyIndex);
   };
 
+  /**
+   * Action edits flow through here so auto-applied media can follow the
+   * action: an app logo that arrived WITH a Launch action leaves with it.
+   * Deliberately chosen images (uploads, library icons) always stay.
+   */
+  const handleActionEdit = (
+    level: 'single' | 'double' | 'triple',
+    next: KeyAction | null,
+  ) => {
+    const prior =
+      level === 'single' ? action : level === 'double' ? actionDouble : actionTriple;
+    if (prior?.type === 'launch' && next?.type !== 'launch') {
+      if (loadKeyMedia(keyIndex).source === 'app') {
+        void handleRemoveIcon();
+      }
+    }
+    // A plugin's branded face leaves with the plugin action
+    if (prior?.type === 'plugin' && next?.type !== 'plugin') {
+      if (loadKeyMedia(keyIndex).source === 'plugin') {
+        void handleRemoveIcon();
+      }
+    }
+    onActionChange(level, next);
+  };
+
+  /** Plugin actions own the key's look — the manual face editors step aside */
+  const pluginOwned = action.type === 'plugin';
+
   const handleRemoveAnimation = () => {
     onSendCommand(encodeCommand({ type: 'ANIM_CLEAR', index: keyIndex }));
     onSendCommand(encodeCommand({ type: 'DRAW', index: keyIndex }));
@@ -216,11 +244,6 @@ export function KeyInspector({
   const handleBgChange = (color: number) => {
     setBg(color);
     sendSetKey({ bg: color });
-  };
-
-  const handleIconChange = (name: string) => {
-    setIcon(name);
-    sendSetKey({ icon: name });
   };
 
   const handleHidChange = (code: number) => {
@@ -288,10 +311,22 @@ export function KeyInspector({
     // Alpha-aware: transparent PNG regions adopt the key's background color
     const rgb565 = canvasToRgb565Alpha(cropped);
     rawIconRef.current = rgb565;
-    saveKeyMediaImage(keyIndex, rgb565); // kept for the inspector thumbnail
+    saveKeyMediaImage(keyIndex, rgb565, 'upload'); // kept for the inspector thumbnail
     applyStaticIcon(rgb565);
     sendSetKey({}); // pushes the current overlay flag alongside the new image
     setIconPreview(cropped.toDataURL());
+  };
+
+  /** Icon chosen from the searchable library — becomes the key's image. */
+  const handlePickLibraryIcon = (canvas: HTMLCanvasElement, name: string) => {
+    // Transparent background → sentinel pixels: the icon rides the key's
+    // background color and follows recolors without re-uploading.
+    const rgb565 = canvasToRgb565Alpha(canvas);
+    rawIconRef.current = rgb565;
+    saveKeyMediaImage(keyIndex, rgb565, 'library');
+    applyStaticIcon(rgb565);
+    sendSetKey({ icon: name });
+    setIconPreview(canvas.toDataURL());
   };
 
   /** Launch action picked from the app list — put the app's logo on the key. */
@@ -311,7 +346,9 @@ export function KeyInspector({
 
       const rgb565 = canvasToRgb565Alpha(canvas);
       rawIconRef.current = rgb565;
-      saveKeyMediaImage(keyIndex, rgb565);
+      // Tagged 'app': this logo auto-applied with the Launch action, so it
+      // auto-removes when the action changes to something else
+      saveKeyMediaImage(keyIndex, rgb565, 'app');
       applyStaticIcon(rgb565);
       setIconPreview(canvas.toDataURL());
 
@@ -396,7 +433,7 @@ export function KeyInspector({
       </header>
 
       <div className="inspector-scroll">
-        <section className="ins-section">
+        <section className="ins-section" hidden={pluginOwned}>
           <SectionTitle>IDENTITY</SectionTitle>
           <Input
             label="Label"
@@ -412,7 +449,7 @@ export function KeyInspector({
           />
         </section>
 
-        <section className="ins-section">
+        <section className="ins-section" hidden={pluginOwned}>
           <SectionTitle>APPEARANCE</SectionTitle>
           <div className="swatch-grid">
             {PRESET_SWATCHES.map((s) => (
@@ -462,7 +499,7 @@ export function KeyInspector({
             <ActionEditor
               action={action}
               hidFallback={hid}
-              onChange={(a) => onActionChange('single', a)}
+              onChange={(a) => handleActionEdit('single', a)}
               onHidChange={handleHidChange}
               onUseAppIcon={handleUseAppIcon}
             />
@@ -471,7 +508,7 @@ export function KeyInspector({
               action={tapLevel === 'double' ? actionDouble : actionTriple}
               allowNone
               hidFallback={hid}
-              onChange={(a) => onActionChange(tapLevel, a)}
+              onChange={(a) => handleActionEdit(tapLevel, a)}
               onHidChange={() => {}}
               onUseAppIcon={handleUseAppIcon}
             />
@@ -521,24 +558,9 @@ export function KeyInspector({
           )}
         </section>
 
-        <section className="ins-section">
+        <section className="ins-section" hidden={pluginOwned}>
           <SectionTitle>ICON</SectionTitle>
-          <div className="glyph-grid">
-            {KEY_ICON_ORDER.map((name) => (
-              <button
-                key={name}
-                type="button"
-                className={`glyph-btn ${icon === name ? 'active' : ''}`}
-                title={name}
-                onClick={() => handleIconChange(name)}
-                aria-label={name}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d={KEY_ICONS[name]} />
-                </svg>
-              </button>
-            ))}
-          </div>
+          <IconPicker onPick={handlePickLibraryIcon} />
           <div
             className={`upload-dashed ${dragIcon ? 'dragover' : ''}`}
             onDragOver={(e) => {
@@ -581,7 +603,7 @@ export function KeyInspector({
           )}
         </section>
 
-        <section className="ins-section">
+        <section className="ins-section" hidden={pluginOwned}>
           <SectionTitle>ANIMATION</SectionTitle>
           <SegmentedControl
             options={[

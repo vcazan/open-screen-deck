@@ -9,10 +9,14 @@ import { rgb565ToImageData, substituteTransparency } from '../protocol/rgb565';
 
 const STORAGE_KEY = 'osd-key-media-v1';
 
+/** Where a key's image came from — auto-applied faces may be auto-removed */
+export type KeyMediaSource = 'upload' | 'library' | 'app' | 'plugin';
+
 interface StoredKeyMedia {
   /** base64 of raw RGB565 frame, before overlay baking */
   image?: string;
   overlayOn?: boolean;
+  source?: KeyMediaSource;
 }
 
 type MediaMap = Record<number, StoredKeyMedia>;
@@ -54,17 +58,26 @@ function fromBase64(b64: string): Uint8Array | null {
   }
 }
 
-export function loadKeyMedia(index: number): { image: Uint8Array | null; overlayOn: boolean } {
+export function loadKeyMedia(index: number): {
+  image: Uint8Array | null;
+  overlayOn: boolean;
+  source: KeyMediaSource | undefined;
+} {
   const entry = readAll()[index];
   return {
     image: entry?.image ? fromBase64(entry.image) : null,
     overlayOn: entry?.overlayOn ?? true,
+    source: entry?.source,
   };
 }
 
-export function saveKeyMediaImage(index: number, bytes: Uint8Array): void {
+export function saveKeyMediaImage(
+  index: number,
+  bytes: Uint8Array,
+  source: KeyMediaSource = 'upload',
+): void {
   const map = readAll();
-  map[index] = { ...map[index], image: toBase64(bytes) };
+  map[index] = { ...map[index], image: toBase64(bytes), source };
   writeAll(map);
 }
 
@@ -78,6 +91,7 @@ export function clearKeyMediaImage(index: number): void {
   const map = readAll();
   if (map[index]) {
     delete map[index].image;
+    delete map[index].source;
     writeAll(map);
   }
 }

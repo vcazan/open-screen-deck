@@ -3,112 +3,246 @@
   "version": 1,
   "plugins": [
     {
+      "id": "obs-control",
+      "name": "OBS Control",
+      "version": "1.1.0",
+      "author": "open-screen-deck",
+      "description": "Scenes, streaming, and recording over obs-websocket. Connection managed in the plugin's settings; keys track live state.",
+      "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/obs-control",
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "1.0.0": "First release: scene switching with live program tracking, stream and record toggles, connection settings on the plugin page.",
+        "1.1.0": "Auto-connect is now a proper toggle in the plugin settings."
+      }
+    },
+    {
       "id": "weather",
       "name": "Weather",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "Live temperature on a key face — Open-Meteo, no API key needed.",
+      "description": "Drawn weather face with condition glyphs. Press to flip between Now and Details (feels-like, wind, humidity).",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/weather",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Drawn weather faces with condition glyphs. Press to flip between Now and Details.",
+        "2.2.0": "Customize it: Celsius/Fahrenheit and starting view are now proper dropdowns."
+      }
     },
     {
       "id": "crypto-price",
       "name": "Crypto Price",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "Live coin prices with 24h trend colors — CoinGecko, no API key needed.",
+      "description": "Live price ticker with three press-cycled views: price, 24h trend, and a 7-day graph \u2014 drawn right on the key.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/crypto-price",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Fully drawn ticker faces: press the key to cycle Price, 24h Trend, and a 7-day Graph.",
+        "2.2.0": "Customize it: starting view (price / trend / graph) and graph period (24h / 7d / 30d)."
+      }
     },
     {
       "id": "world-clock",
       "name": "World Clock",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "A ticking clock for any timezone on a key face.",
+      "description": "A real clock on the key \u2014 press to flip between an analog dial and a digital view with the date.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/world-clock",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "A real clock face \u2014 press to flip between an analog dial and digital + date.",
+        "2.2.0": "Customize it: choose an analog dial or digital + date as the resting face."
+      }
     },
     {
       "id": "web-request",
       "name": "Web Request",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "Fire any HTTP request from a key — webhooks, REST APIs, IFTTT, n8n.",
+      "description": "Webhook key with live feedback: sending \u2192 HTTP status, green for 2xx, red for errors.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/web-request",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Live feedback on the key: SENDING\u2026 then the HTTP status, green for 2xx, red for errors.",
+        "2.2.0": "Customize it: method dropdown and a per-key accent color."
+      }
     },
     {
       "id": "philips-hue",
       "name": "Philips Hue",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "Toggle Hue lights and rooms from deck keys — talks to your bridge directly.",
+      "description": "The key is the bulb \u2014 glows warm when the light is on. Press to toggle lights or rooms.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/philips-hue",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "The key is now the bulb \u2014 it glows warm when the light is on.",
+        "2.2.0": "The room/group option is now a proper toggle."
+      }
     },
     {
       "id": "soundboard",
       "name": "Soundboard",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "Play sounds and stingers from deck keys — press again to stop.",
+      "description": "Speaker-branded keys with an animated equalizer while a sound plays. Press to play, press again to stop.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/soundboard",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Branded speaker face with an animated equalizer while a sound is playing.",
+        "2.2.0": "Customize it: per-key accent color for the speaker face and equalizer."
+      }
     },
     {
       "id": "text-snippet",
       "name": "Text Snippets",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "author": "Open Screen Deck",
-      "description": "Type canned text into whatever app has focus — emails, replies, emotes.",
+      "description": "Types canned text into the focused app. Keys wear a quote face with a preview of the snippet.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/text-snippet",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Keys wear a quote face with a preview of their snippet."
+      }
     },
     {
       "id": "zoom-control",
       "name": "Zoom Control",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "author": "Open Screen Deck",
-      "description": "Mute, video, and hand-raise for Zoom meetings — works without focusing Zoom.",
+      "description": "Branded mic, camera, and raise-hand keys that control Zoom globally.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/zoom-control",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Branded mic, camera, and raise-hand faces."
+      }
     },
     {
       "id": "screenshot",
       "name": "Screenshot",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "Capture the screen, a window, or an area — to clipboard or a folder.",
+      "description": "A camera key that flashes when it fires. Screen, area, or window \u2014 to clipboard or a folder.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/screenshot",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Camera face with a shutter flash when the screenshot fires.",
+        "2.2.0": "Customize it: capture mode is now a dropdown (area / window / screen)."
+      }
     },
     {
       "id": "system-actions",
       "name": "System Actions",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "author": "Open Screen Deck",
-      "description": "Lock the screen, sleep the displays, empty the trash, toggle dark mode.",
+      "description": "Lock screen, sleep displays, empty trash, toggle dark mode \u2014 each with its own drawn face.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/system-actions",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Each action gets its own drawn face: lock, sleep, trash, dark mode."
+      }
     },
     {
       "id": "home-assistant",
       "name": "Home Assistant",
-      "version": "1.0.0",
+      "version": "2.1.0",
       "author": "Open Screen Deck",
-      "description": "Fire Home Assistant webhooks from deck keys — pair with webhook-triggered automations.",
+      "description": "Fires Home Assistant webhooks. Wears the HA house glyph and flashes with the result.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/home-assistant",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Wears the HA house glyph and flashes green/red with the webhook result."
+      }
     },
     {
       "id": "pomodoro",
       "name": "Pomodoro",
-      "version": "1.0.0",
+      "version": "2.2.0",
       "author": "Open Screen Deck",
-      "description": "A pomodoro timer that lives on a deck key — press to start, key face counts down.",
+      "description": "A progress ring that empties as focus time runs down, flips red for the break, and celebrates when done.",
       "base": "https://raw.githubusercontent.com/vcazan/open-screen-deck/main/plugins/pomodoro",
-      "files": ["manifest.json", "main.js"]
+      "files": [
+        "manifest.json",
+        "main.js",
+        "icon.svg"
+      ],
+      "icon": "icon.svg",
+      "changelog": {
+        "2.1.0": "New store icon so you can spot the plugin at a glance.",
+        "2.0.0": "Progress ring on the key: teal focus arc, red break arc, celebration when done.",
+        "2.2.0": "Customize it: pick your own focus and break ring colors."
+      }
     }
   ]
 }

@@ -1,7 +1,8 @@
 {
   "id": "soundboard",
   "name": "Soundboard",
-  "version": "1.0.0",
-  "description": "Play sounds and stingers from deck keys — press again to stop.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "Speaker-branded keys with an animated equalizer while a sound plays. Press to play, press again to stop.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

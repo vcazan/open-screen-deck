@@ -23,6 +23,105 @@
   max-width: 100%;
 }
 
+/* App screenshots */
+.app-shot {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+  max-width: 100%;
+  margin: 0.6rem 0 1.2rem;
+}
+
+/* ── Dynamic plugin directory ── */
+.plugin-directory-status {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.72rem;
+}
+
+.plugin-directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.7rem;
+  margin: 0.8rem 0 1.4rem;
+}
+
+.plugin-directory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: var(--md-code-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.plugin-directory-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 184, 46, 0.4);
+}
+
+.pdc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pdc-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.pdc-icon img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.pdc-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdc-name {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.pdc-version {
+  font-size: 0.62rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.plugin-directory-card .pdc-desc {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.plugin-directory-card .pdc-changelog {
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(245, 184, 46, 0.07);
+  font-size: 0.62rem;
+  line-height: 1.45;
+  color: var(--md-default-fg-color--light);
+}
+
+.plugin-directory-card .pdc-link {
+  font-size: 0.66rem;
+  font-weight: 600;
+  margin-top: auto;
+}
+
 /* Grid card hover lift */
 .grid.cards > ul > li {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),

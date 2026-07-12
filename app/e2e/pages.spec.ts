@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { faceFingerprint, freshApp, selectKey } from './helpers';
+import { faceFingerprint, freshApp, pickAction, selectKey } from './helpers';
 
 const addPageBtn = (page: Page) => page.locator('.deck-page-btn[aria-label="Add page"]');
 const removePageBtn = (page: Page) =>
@@ -121,11 +121,11 @@ test.describe('dynamic multi-page decks', () => {
     await pageTabs(page).nth(0).click();
     await page.waitForTimeout(400);
     await selectKey(page, 5);
-    await page.locator('.action-type-select').first().selectOption('page_next');
+    await pickAction(page, 'page_next');
     await page.waitForTimeout(400);
     await page.keyboard.press('Escape');
     await selectKey(page, 4);
-    await page.locator('.action-type-select').first().selectOption('page_prev');
+    await pickAction(page, 'page_prev');
     await page.waitForTimeout(400);
     await page.keyboard.press('Escape');
 
@@ -147,14 +147,14 @@ test.describe('dynamic multi-page decks', () => {
 
   test('per-page actions: same position, different action per page', async ({ page }) => {
     await selectKey(page, 0);
-    await page.locator('.action-type-select').first().selectOption('open_url');
+    await pickAction(page, 'open_url');
     await page.locator('.action-editor .field-input').first().fill('https://page1.example');
     await page.waitForTimeout(600);
     await page.keyboard.press('Escape');
     await addPageBtn(page).click();
     await page.waitForTimeout(600);
     await selectKey(page, 0);
-    await page.locator('.action-type-select').first().selectOption('shell');
+    await pickAction(page, 'shell');
     await page.waitForTimeout(600);
     const actions = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('osd-key-actions-v2') ?? '{}').single ?? [],

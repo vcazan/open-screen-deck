@@ -1,7 +1,8 @@
 {
   "id": "web-request",
   "name": "Web Request",
-  "version": "1.0.0",
-  "description": "Fire any HTTP request from a key — webhooks, REST APIs, IFTTT, n8n.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "Webhook key with live feedback: sending \u2192 HTTP status, green for 2xx, red for errors.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { freshApp, selectKey } from './helpers';
+import { freshApp, pickAction, selectKey } from './helpers';
 
 test.describe('actions and deck modes', () => {
   test.beforeEach(async ({ page }) => {
@@ -25,7 +25,7 @@ test.describe('actions and deck modes', () => {
 
   test('action type change persists per key', async ({ page }) => {
     await selectKey(page, 0);
-    await page.locator('.action-type-select').selectOption('open_url');
+    await pickAction(page, 'open_url');
     await page.locator('.action-editor .field-input').first().fill('https://example.com');
     await page.waitForTimeout(600);
     const actions = await page.evaluate(() =>
@@ -49,7 +49,7 @@ test.describe('actions and deck modes', () => {
 
   test('hotkey editor records a chord from the keyboard', async ({ page }) => {
     await selectKey(page, 2);
-    await page.locator('.action-type-select').selectOption('hotkey');
+    await pickAction(page, 'hotkey');
     await page.locator('.hotkey-record-btn').first().click();
     await page.keyboard.press('Meta+Shift+KeyM');
     await page.waitForTimeout(300);

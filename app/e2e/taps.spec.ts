@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { freshApp, selectKey } from './helpers';
+import { freshApp, pickAction, selectKey } from './helpers';
 
 const addPageBtn = (page: Page) => page.locator('.deck-page-btn[aria-label="Add page"]');
 const pageTabs = (page: Page) => page.locator('.deck-page-btn[role="tab"]');
@@ -7,7 +7,7 @@ const pageTabs = (page: Page) => page.locator('.deck-page-btn[role="tab"]');
 async function setDoubleAction(page: Page, keyPos: number, type: string) {
   await selectKey(page, keyPos);
   await page.locator('.segmented-option', { hasText: 'Double' }).click();
-  await page.locator('.action-type-select').first().selectOption(type);
+  await pickAction(page, type);
   await page.waitForTimeout(500); // tap-arm effect pushes h2 to the device
   await page.keyboard.press('Escape');
 }

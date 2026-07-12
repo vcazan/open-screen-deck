@@ -1,7 +1,8 @@
 {
   "id": "weather",
   "name": "Weather",
-  "version": "1.0.0",
-  "description": "Live temperature on a key face — Open-Meteo, no API key needed.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "Drawn weather face with condition glyphs. Press to flip between Now and Details (feels-like, wind, humidity).",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

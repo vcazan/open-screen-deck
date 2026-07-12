@@ -38,6 +38,16 @@ export async function selectKey(page: Page, index: number): Promise<void> {
   await expect(page.locator('.inspector-panel')).toBeVisible();
 }
 
+/**
+ * Choose an action in the visual picker. Values: action types ('hotkey',
+ * 'open_url'…), 'tile:kind', 'plugin:actionId', or 'none'.
+ */
+export async function pickAction(page: Page, value: string): Promise<void> {
+  await page.locator('.action-picker-trigger').first().click();
+  await page.locator(`.action-option[data-value="${value}"]`).click();
+  await expect(page.locator('.action-picker-panel')).toHaveCount(0);
+}
+
 export async function scrollInspectorToBottom(page: Page): Promise<void> {
   await page.evaluate(() => {
     const el = document.querySelector('.inspector-scroll');

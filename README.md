@@ -1,77 +1,119 @@
 # Open Screen Deck
 
-**A per-key LCD macro pad — open hardware, open firmware, no subscription.**
-
-**Full documentation: [vcazan.github.io/open-screen-deck](https://vcazan.github.io/open-screen-deck/)** — parts list, print settings, illustrated assembly, flashing, protocol reference.
+**A per-key LCD macro pad — open hardware, open firmware, open software.**
 
 Six Waveshare ScreenKey modules (128×128 IPS screen inside every key), an
-ESP32-S3 carrier PCB, and a 3D-printed case. Plugs in as a standard USB
-keyboard (F13–F18), streams icons and animations over USB or plays them from
-a microSD card. Build it yourself from the files in this repo.
+ESP32-S3 carrier PCB, a 3D-printed case, and a desktop companion app with
+a plugin store. Plugs in as a standard USB keyboard, streams icons and
+animations over USB or plays them from microSD — and keeps working when
+the software isn't running.
+
+**Docs: [vcazan.github.io/open-screen-deck](https://vcazan.github.io/open-screen-deck/)** —
+parts list, illustrated assembly, flashing, app tour, plugin directory,
+protocol reference.
 
 ![Open Screen Deck](docs/images/hero.png)
 
 ## Why this exists
 
-Stream Decks are great. Subscriptions, closed firmware, and $150 price tags
-are not. Open Screen Deck is the open reference build for multi-ScreenKey
-macro decks: every file you need — KiCad sources, Gerbers, OpenSCAD +
-STLs, firmware, docs — lives here, and the whole thing costs **about $100
-in parts** ($66 of which is the six key modules).
+Stream Decks are great. Subscriptions, closed firmware, and $150 price
+tags are not. Open Screen Deck is the open reference build for
+multi-ScreenKey macro decks: every file you need — KiCad sources, Gerbers,
+OpenSCAD + STLs, firmware, companion app, plugins, docs — lives here, and
+the whole thing costs **about $100 in parts** ($66 of which is the six key
+modules).
 
-|  |  |
+## The three pieces
+
+### 1 · Hardware — build it
+
+| | |
 |--|--|
-| **Keys** | 6× Waveshare 0.85″ ScreenKey (SKU 34168) — LCD + mechanical switch in one module |
-| **Screens** | 128×128 IPS per key, ST7735, shared SPI |
+| **Keys** | 6× Waveshare 0.85″ ScreenKey (SKU 34168) — LCD + mechanical switch in one |
 | **Brain** | ESP32-S3-WROOM-1 (16 MB flash, 8 MB PSRAM) on a custom 55×112 mm carrier |
-| **Host link** | USB-C → standard HID keyboard (F13–F18) + CDC serial for config |
-| **Media** | microSD for on-device icons/animations, or stream frames over USB |
-| **Case** | 59.7 × 116.7 × 28.2 mm printed deck + optional 25° stand |
-| **Fasteners** | 4 corner screws close the whole thing — they thread through the key modules' own mounting nuts |
+| **Case** | 59.7 × 116.7 × 28.2 mm printed deck + optional 25° stand, 4 corner screws |
 
-## Build it
+1. Order 6× Waveshare 34168 (~$66) and the PCB
+   (`hardware/pcb/data_streamdeck_gerbers.zip` → JLCPCB, ~$15 for five)
+2. Print the case — 4 STLs in `hardware/enclosure/stl/`, no supports
+3. Assemble — [illustrated guide](https://vcazan.github.io/open-screen-deck/build/assembly/),
+   ~45 minutes
+4. Shopping list with links: [`hardware/bom_assembly.csv`](hardware/bom_assembly.csv)
 
-1. **Order the key modules** — 6× Waveshare 34168 (~$66)
-2. **Order the PCB** — upload `hardware/pcb/data_streamdeck_gerbers.zip` to
-   JLCPCB (~$15 for five boards); component list in `hardware/pcb/bom.csv`
-3. **Print the case** — 4 STLs in `hardware/enclosure/stl/`, no supports
-4. **Screw it together** — full illustrated guide in
-   [`docs/assembly.md`](docs/assembly.md), ~45 minutes
-5. **Flash the firmware** — see below
+### 2 · Firmware — flash it
 
-Complete shopping list with links and prices:
-[`hardware/bom_assembly.csv`](hardware/bom_assembly.csv)
+USB HID keyboard (F13–F24) + a JSON serial protocol for everything else:
+per-key labels/colors/images, GIF/video animations from microSD, up to
+**8 pages** (48 keys) switched on-device, and single/double/triple-press
+actions with smart latency. Flash from the Arduino IDE
+([guide](https://vcazan.github.io/open-screen-deck/firmware/flashing/)) —
+or let the companion app flash the bundled firmware in one click.
 
-## Flash the firmware
+### 3 · App — drive it
 
-Arduino IDE (or arduino-cli) with the ESP32 board package:
+<p>
+  <img src="docs/images/app/deck.png" alt="Companion app" width="700">
+</p>
 
-1. Board: **ESP32S3 Dev Module** — enable **USB CDC On Boot**, USB Mode: **USB-OTG (TinyUSB)**
-2. Libraries: `Adafruit ST7735 and ST7789`, `Adafruit GFX`
-3. Open `firmware/main.cpp`, hold **BOOT**, tap **RESET**, upload
-4. The deck enumerates as a keyboard (F13–F18) + a serial port
+A Tauri (Rust + React) companion for macOS/Windows:
 
-Key labels, colors, and HID codes are configurable at runtime over the
-serial protocol — no reflash needed. See [`docs/protocol.md`](docs/protocol.md).
+- **Visual key editor** — click a key; pick an action from a searchable,
+  icon-based gallery; drop an image, icon (7,400 built in), or GIF on it
+- **Actions** — launch apps (grabs the logo), hotkey chords, shell, URLs,
+  mic mute with live status, OBS, macros, page switching
+- **Profiles** — auto-saving layouts with pages and media, shareable as
+  one file, auto-activated per app, plus ready-made templates
+- **Live tiles** — clock, timer, CPU/RAM, volume, now playing
+- **Plugin store** — install, update (with changelogs, ask-first), and
+  build plugins that draw fully custom key faces:
+
+<p>
+  <img src="docs/images/app/plugin-faces.png" alt="Plugin faces" width="700">
+</p>
+
+- **In-app firmware updates** — flash the bundled firmware over USB, with
+  bootloader recovery
+
+[Full app tour](https://vcazan.github.io/open-screen-deck/app/) ·
+[Releases](https://github.com/vcazan/open-screen-deck/releases)
+
+## Plugins
+
+The [plugin directory](https://vcazan.github.io/open-screen-deck/plugins/)
+loads live from [`plugins/registry.json`](plugins/registry.json) — crypto
+ticker, weather, world clock, pomodoro, soundboard, OBS control, Philips
+Hue, Home Assistant, Zoom, screenshots, system actions, and more. Each
+plugin owns its keys' faces (sparkline graphs, analog clocks, progress
+rings) and exposes native customization controls.
+
+Building one takes minutes: **Plugins → Developer → Create** scaffolds a
+working plugin with hot reload. See the
+[developer center](https://vcazan.github.io/open-screen-deck/plugins/develop/)
+and [`plugins/README.md`](plugins/README.md).
 
 ## Repo map
 
 ```
-firmware/            ESP32-S3 Arduino firmware (HID + CDC + SD + animations)
-hardware/pcb/        KiCad project, Gerbers, PCB BOM
-hardware/enclosure/  OpenSCAD sources + printable STLs
-hardware/3d/         Fastener STEP models used in the CAD assembly
-docs/                Assembly guide, protocol, design docs, project site
+hardware/
+  pcb/               KiCad project, Gerbers, PCB BOM
+  enclosure/         OpenSCAD sources + printable STLs
+  3d/                Fastener STEP models used in the CAD assembly
+firmware/            ESP32-S3 Arduino firmware (HID + CDC + SD + pages + animations)
+app/                 Tauri companion app (Rust backend, React front end)
+plugins/             Bundled plugins + registry.json (the store's index)
+profiles/            Community profile gallery (.osdprofile.json)
+docs/                Project site (MkDocs) — guides, protocol, design docs
 scripts/             PCB/schematic generators and build tooling
 ```
 
-## Design docs
+## Contributing
 
-- [`docs/assembly.md`](docs/assembly.md) — illustrated build guide
-- [`docs/mechanical_contract.md`](docs/mechanical_contract.md) — how the PCB, modules, and case fit together
-- [`docs/pcb_design_brief.md`](docs/pcb_design_brief.md) — board layout and pinout truth
-- [`docs/protocol.md`](docs/protocol.md) — USB serial protocol (v0.4)
-- [`docs/product_architecture.md`](docs/product_architecture.md) — media storage and streaming design
+- **Plugins** — PR a folder into `plugins/` + a registry entry
+  ([how](https://vcazan.github.io/open-screen-deck/plugins/develop/))
+- **Profiles** — export from the app, PR into `profiles/`
+- **Hardware remixes** — OpenSCAD sources are parametric; keep the
+  [mechanical contract](docs/mechanical_contract.md) if you want the PCB to fit
+- **App / firmware** — `cd app && npm test && npm run test:e2e` must pass
 
 ## Related projects
 
@@ -79,11 +121,12 @@ Cousins worth knowing about: [FreeTouchDeck](https://github.com/DustinWatts/Free
 (one touchscreen), [open-deck](https://github.com/joshr120/open-deck) (one TFT
 behind keys), [MacroPad](https://github.com/yuvasaro/MacroPad) (per-key OLED).
 Open Screen Deck differs in using **six discrete LCD key modules** with a
-fabricated carrier PCB and a fully documented mechanical stack.
+fabricated carrier PCB, a documented mechanical stack, and a full
+companion-app + plugin ecosystem.
 
 ## License
 
-- **Firmware, scripts, docs:** [MIT](LICENSE)
+- **Firmware, app, scripts, docs:** [MIT](LICENSE)
 - **Hardware (PCB + enclosure):** [CERN-OHL-P v2](hardware/LICENSE)
 
 ScreenKey modules are a [Waveshare](https://www.waveshare.com) product; this

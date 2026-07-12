@@ -1,7 +1,8 @@
 {
   "id": "pomodoro",
   "name": "Pomodoro",
-  "version": "1.0.0",
-  "description": "A pomodoro timer that lives on a deck key.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "A progress ring that empties as focus time runs down, flips red for the break, and celebrates when done.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

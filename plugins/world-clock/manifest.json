@@ -1,7 +1,8 @@
 {
   "id": "world-clock",
   "name": "World Clock",
-  "version": "1.0.0",
-  "description": "A ticking clock for any timezone on a key face.",
-  "main": "main.js"
+  "version": "2.2.0",
+  "description": "A real clock on the key \u2014 press to flip between an analog dial and a digital view with the date.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

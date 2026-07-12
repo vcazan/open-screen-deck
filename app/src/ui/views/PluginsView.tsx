@@ -1,31 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   DEFAULT_REGISTRY_URL,
+  fetchRegistryIcon,
   getRegistryUrl,
+  notesSince,
   pluginHost,
   setRegistryUrl,
+  versionNewer,
   type InstalledPlugin,
   type RegistryPlugin,
 } from '../../plugins/host';
 import { isTauri } from '../../transport/TauriSerialTransport';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-
-function versionNewer(a: string, b: string): boolean {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] ?? 0) > (pb[i] ?? 0)) return true;
-    if ((pa[i] ?? 0) < (pb[i] ?? 0)) return false;
-  }
-  return false;
-}
+import { PluginDetail, type PluginDetailTarget } from './PluginDetail';
 
 function PuzzleGlyph() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M10 3.5A1.5 1.5 0 0111.5 2h1A1.5 1.5 0 0114 3.5V5h3a2 2 0 012 2v3h-1.5a1.5 1.5 0 00-1.5 1.5v1a1.5 1.5 0 001.5 1.5H19v3a2 2 0 01-2 2h-3v-1.5a1.5 1.5 0 00-1.5-1.5h-1a1.5 1.5 0 00-1.5 1.5V19H7a2 2 0 01-2-2v-3H3.5A1.5 1.5 0 012 12.5v-1A1.5 1.5 0 013.5 10H5V7a2 2 0 012-2h3V3.5z" />
     </svg>
+  );
+}
+
+/** Plugin icon with a graceful fallback to the puzzle glyph. */
+function PluginIcon({ src, name }: { src?: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <span className="plugin-card-glyph">
+        <PuzzleGlyph />
+      </span>
+    );
+  }
+  return (
+    <img
+      className="plugin-card-icon"
+      src={src}
+      alt={`${name} icon`}
+      onError={() => setFailed(true)}
+      draggable={false}
+    />
   );
 }
 
@@ -50,10 +65,20 @@ export function PluginsView() {
       .catch(() => {});
   }, []);
 
+  const [registryIcons, setRegistryIcons] = useState<Record<string, string>>({});
+  const [detail, setDetail] = useState<PluginDetailTarget | null>(null);
+
   const loadRegistry = useCallback(async () => {
     setRegistryError(null);
     try {
-      setRegistry(await pluginHost.fetchRegistry());
+      const entries = await pluginHost.fetchRegistry();
+      setRegistry(entries);
+      // Icons arrive as they load — cards upgrade from the puzzle glyph
+      for (const entry of entries) {
+        void fetchRegistryIcon(entry).then((icon) => {
+          if (icon) setRegistryIcons((prev) => ({ ...prev, [entry.id]: icon }));
+        });
+      }
     } catch (err) {
       setRegistry(null);
       setRegistryError(
@@ -119,36 +144,57 @@ export function PluginsView() {
               const update = (registry ?? []).find(
                 (r) => r.id === p.id && versionNewer(r.version, p.version),
               );
+              const updateNotes = update ? notesSince(update.changelog, p.version) : [];
+              const registryEntry = (registry ?? []).find((r) => r.id === p.id);
+              const openDetail = () =>
+                setDetail({ installed: p, registry: registryEntry, icon: p.icon });
               return (
-                <article key={p.id} className="plugin-card installed">
+                <article
+                  key={p.id}
+                  className="plugin-card installed clickable"
+                  onClick={openDetail}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') openDetail();
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${p.name} details`}
+                >
                   <div className="plugin-card-head">
-                    <span className="plugin-card-glyph">
-                      <PuzzleGlyph />
-                    </span>
+                    <PluginIcon src={p.icon} name={p.name} />
                     <div className="plugin-card-id">
                       <span className="plugin-card-name">{p.name}</span>
                       <span className="plugin-card-version">v{p.version}</span>
                     </div>
+                    {pluginHost.getSettingsSpec(p.id) && (
+                      <span className="plugin-card-badge">settings</span>
+                    )}
                   </div>
                   <p className="plugin-card-desc">{p.description || 'No description.'}</p>
-                  <div className="plugin-card-actions">
-                    {update && (
+                  {updateNotes.length > 0 && (
+                    <ul className="plugin-card-changelog">
+                      {updateNotes.map((n) => (
+                        <li key={n.version}>
+                          <span className="plugin-card-changelog-version">v{n.version}</span>
+                          {n.note}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {update && (
+                    <div className="plugin-card-actions">
                       <Button
                         variant="primary"
                         disabled={busy !== null}
-                        onClick={() => run(`update ${p.id}`, () => pluginHost.install(update))}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void run(`update ${p.id}`, () => pluginHost.install(update));
+                        }}
                       >
                         {busy === `update ${p.id}` ? 'Updating…' : `Update to v${update.version}`}
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      disabled={busy !== null}
-                      onClick={() => run(`uninstall ${p.id}`, () => pluginHost.uninstall(p.id))}
-                    >
-                      {busy === `uninstall ${p.id}` ? 'Removing…' : 'Uninstall'}
-                    </Button>
-                  </div>
+                    </div>
+                  )}
                 </article>
               );
             })}
@@ -190,32 +236,46 @@ export function PluginsView() {
           </p>
         )}
         <div className="plugins-grid">
-          {notInstalled.map((p) => (
-            <article key={p.id} className="plugin-card">
-              <div className="plugin-card-head">
-                <span className="plugin-card-glyph">
-                  <PuzzleGlyph />
-                </span>
-                <div className="plugin-card-id">
-                  <span className="plugin-card-name">{p.name}</span>
-                  <span className="plugin-card-version">
-                    v{p.version}
-                    {p.author ? ` · ${p.author}` : ''}
-                  </span>
+          {notInstalled.map((p) => {
+            const openDetail = () => setDetail({ registry: p, icon: registryIcons[p.id] });
+            return (
+              <article
+                key={p.id}
+                className="plugin-card clickable"
+                onClick={openDetail}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') openDetail();
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${p.name} details`}
+              >
+                <div className="plugin-card-head">
+                  <PluginIcon src={registryIcons[p.id]} name={p.name} />
+                  <div className="plugin-card-id">
+                    <span className="plugin-card-name">{p.name}</span>
+                    <span className="plugin-card-version">
+                      v{p.version}
+                      {p.author ? ` · ${p.author}` : ''}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <p className="plugin-card-desc">{p.description}</p>
-              <div className="plugin-card-actions">
-                <Button
-                  variant="primary"
-                  disabled={busy !== null}
-                  onClick={() => run(`install ${p.id}`, () => pluginHost.install(p))}
-                >
-                  {busy === `install ${p.id}` ? 'Installing…' : 'Install'}
-                </Button>
-              </div>
-            </article>
-          ))}
+                <p className="plugin-card-desc">{p.description}</p>
+                <div className="plugin-card-actions">
+                  <Button
+                    variant="primary"
+                    disabled={busy !== null}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void run(`install ${p.id}`, () => pluginHost.install(p));
+                    }}
+                  >
+                    {busy === `install ${p.id}` ? 'Installing…' : 'Install'}
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -303,6 +363,26 @@ export function PluginsView() {
       </section>
 
       {status && <p className="muted plugins-status">{status}</p>}
+
+      {detail && (
+        <PluginDetail
+          target={detail}
+          busy={busy}
+          onInstall={(entry) =>
+            void run(`install ${entry.id}`, async () => {
+              await pluginHost.install(entry);
+              setDetail(null);
+            })
+          }
+          onUninstall={(id) =>
+            void run(`uninstall ${id}`, async () => {
+              await pluginHost.uninstall(id);
+              setDetail(null);
+            })
+          }
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }

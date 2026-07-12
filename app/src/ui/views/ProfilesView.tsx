@@ -3,6 +3,7 @@ import { rgb565ToRgb888 } from '../../protocol/rgb565';
 import { Button } from '../components/Button';
 import type { StoredProfile } from '../../utils/profileStore';
 import { ProfileStore } from '../../utils/profileStore';
+import { STARTER_PROFILES, type StarterProfile } from '../../assets/starterProfiles';
 
 interface ProfilesViewProps {
   profiles: StoredProfile[];
@@ -16,6 +17,7 @@ interface ProfilesViewProps {
   onExport: (profile: StoredProfile) => void;
   onImport: () => void;
   onExportAll: () => void;
+  onApplyStarter: (starter: StarterProfile) => void;
 }
 
 function bgToCss(color: number): string {
@@ -102,6 +104,7 @@ export function ProfilesView({
   onExport,
   onImport,
   onExportAll,
+  onApplyStarter,
 }: ProfilesViewProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -234,6 +237,38 @@ export function ProfilesView({
           })}
         </div>
       )}
+
+      <div className="profiles-templates">
+        <h3>Templates</h3>
+        <p className="profiles-hint">
+          Ready-made layouts — adding one applies it to the deck and saves it as a new profile.
+        </p>
+        <div className="profiles-template-grid">
+          {STARTER_PROFILES.map((starter) => {
+            const firstPage = starter.pages?.[0] ?? starter.keys;
+            const pageCount = starter.pages?.length ?? 2;
+            return (
+              <article key={starter.id} className="profile-template-card">
+                <div className="profile-swatch-grid" aria-hidden>
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <span key={i} style={{ background: bgToCss(firstPage[i]?.bg ?? 0x2965) }} />
+                  ))}
+                </div>
+                <div className="profile-template-info">
+                  <span className="profile-template-name">
+                    {starter.name}
+                    <span className="profile-template-pages">
+                      {pageCount} {pageCount === 1 ? 'page' : 'pages'}
+                    </span>
+                  </span>
+                  <span className="profile-template-desc">{starter.description}</span>
+                </div>
+                <Button onClick={() => onApplyStarter(starter)}>Add</Button>
+              </article>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

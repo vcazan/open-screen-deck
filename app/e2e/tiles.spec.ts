@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { faceFingerprint, freshApp, selectKey } from './helpers';
+import { faceFingerprint, freshApp, pickAction, selectKey } from './helpers';
 
 test.describe('live tiles', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe('live tiles', () => {
 
   test('clock tile paints the key face and keeps ticking', async ({ page }) => {
     await selectKey(page, 2);
-    await page.locator('.action-type-select').first().selectOption('tile');
+    await pickAction(page, 'tile:clock');
     await page.waitForTimeout(1200); // first paint
     const first = await faceFingerprint(page, 2);
     // clock blinks its colon every second — the face must change
@@ -19,8 +19,7 @@ test.describe('live tiles', () => {
 
   test('timer tile starts and stops on key press', async ({ page }) => {
     await selectKey(page, 3);
-    await page.locator('.action-type-select').first().selectOption('tile');
-    await page.locator('select[aria-label="Tile kind"]').selectOption('timer');
+    await pickAction(page, 'tile:timer');
     await page.waitForTimeout(1200);
     await page.keyboard.press('Escape');
 
@@ -43,7 +42,7 @@ test.describe('live tiles', () => {
 
   test('tile stops painting when its page is hidden', async ({ page }) => {
     await selectKey(page, 0);
-    await page.locator('.action-type-select').first().selectOption('tile');
+    await pickAction(page, 'tile:clock');
     await page.waitForTimeout(1200);
     await page.keyboard.press('Escape');
     // add a page and switch to it — position 0 now shows slot 6, not the clock
@@ -58,7 +57,7 @@ test.describe('live tiles', () => {
     page,
   }) => {
     await selectKey(page, 1);
-    await page.locator('.action-type-select').first().selectOption('tile');
+    await pickAction(page, 'tile:clock');
     await page.waitForTimeout(1500);
     // simulated SD still has no icon for this key
     const media = await page.evaluate(async () => {

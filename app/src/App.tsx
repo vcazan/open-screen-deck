@@ -67,11 +67,18 @@ import {
 } from './utils/deckSnapshot';
 import { executeAction } from './actions/executor';
 import { createTapResolver } from './utils/tapResolver';
+import { saveKeyMediaImage } from './utils/keyMedia';
 import { DEFAULT_MIC_FACES } from './actions/types';
 import { profileToActions } from './utils/profiles';
 import { isTauri } from './transport/TauriSerialTransport';
-import { obsClient, loadObsSettings } from './integrations/obs';
+import { obsClient, loadObsSettings, saveObsSettings } from './integrations/obs';
 import { Onboarding, isOnboardingPending } from './ui/Onboarding';
+import {
+  PluginUpdatePrompt,
+  UPDATE_DISMISS_KEY,
+  updateSignature,
+} from './ui/components/PluginUpdatePrompt';
+import type { PluginUpdate } from './plugins/host';
 import { Confetti } from './ui/components/Confetti';
 import { pluginHost } from './plugins/host';
 import { starterToProfileData, type StarterProfile } from './assets/starterProfiles';
@@ -418,7 +425,18 @@ export default function App() {
       // Host-side actions travel with the profile (v2); v1 maps to HID.
       // Multi-tap bindings re-arm the device via the tap-arm effect.
       const multi = profileToMultiActions(data);
-      keyActions.setAll(profileToActions(data), multi.double, multi.triple);
+      const actions = profileToActions(data);
+      keyActions.setAll(actions, multi.double, multi.triple);
+      // Plugin keys own their faces — let each plugin paint its slot.
+      // Sequential so network-backed plugins (weather, crypto) don't stampede.
+      void (async () => {
+        for (let i = 0; i < configs.length; i++) {
+          const a = actions[i];
+          if (a?.type === 'plugin' && a.plugin) {
+            await pluginHost.notifyAssigned(a.plugin, a.settings, i).catch(() => {});
+          }
+        }
+      })();
     },
     [device, keyActions],
   );
@@ -681,10 +699,64 @@ export default function App() {
           }),
         );
       },
+      // Custom plugin visuals: live frames stream via SET_FACE, branded
+      // faces persist via SET_IMAGE (tagged so they follow the action)
+      sendFace: (slot, rgb565) => device.sendSetFace(slot, rgb565),
+      sendImage: async (slot, rgb565) => {
+        saveKeyMediaImage(slot, rgb565, 'plugin');
+        await device.sendSetImage(slot, rgb565);
+      },
+      // OBS rides the app's shared obs-websocket client; the obs-control
+      // plugin owns the connection settings. Lazy-connects on first use.
+      obsRequest: async (requestType, requestData) => {
+        if (!obsClient.isConnected()) {
+          const s = loadObsSettings();
+          if (!s.url) throw new Error('set the OBS address in the plugin settings first');
+          await obsClient.connect(s.url, s.password);
+        }
+        return obsClient.call(requestType, requestData ?? {});
+      },
+      obsConfigure: async (url, password, autoConnect) => {
+        saveObsSettings({ url, password, autoConnect });
+        if (!url) {
+          obsClient.disconnect();
+        } else if (autoConnect) {
+          await obsClient.connect(url, password);
+        }
+      },
     });
     void pluginHost.loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [device.logLocal, device.sendCommand]);
+
+  // Plugin updates: check the registry shortly after launch and ask before
+  // installing. "Later" snoozes that exact version set — the prompt only
+  // returns when something newer lands.
+  const [pluginUpdates, setPluginUpdates] = useState<PluginUpdate[] | null>(null);
+  useEffect(() => {
+    if (!isTauri()) return;
+    const timer = setTimeout(async () => {
+      try {
+        const updates = await pluginHost.checkForUpdates();
+        if (updates.length === 0) return;
+        const sig = updateSignature(updates);
+        if (localStorage.getItem(UPDATE_DISMISS_KEY) === sig) return;
+        setPluginUpdates(updates);
+      } catch {
+        // registry unreachable — the Plugins view surfaces that state
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Test seam: lets e2e drive the update prompt with fixture data
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    w.__osdShowUpdates = (updates: PluginUpdate[]) => setPluginUpdates(updates);
+    return () => {
+      delete w.__osdShowUpdates;
+    };
+  }, []);
 
   // Diagnostics hooks for the companion's --debug-js channel (Tauri only)
   useEffect(() => {
@@ -707,6 +779,44 @@ export default function App() {
         return 'sent';
       },
       plugins: () => pluginHost.list().map((p) => p.id),
+      pluginsInstalled: () =>
+        pluginHost.listInstalled().map((p) => `${p.id}@${p.version} icon:${p.icon ? 'yes' : 'no'}`),
+      /** Registry vs installed — what the update prompt would show. */
+      pluginUpdates: async () => {
+        const updates = await pluginHost.checkForUpdates();
+        return updates.map(
+          (u) =>
+            `${u.entry.id} ${u.installed.version} -> ${u.entry.version}: ` +
+            (u.notes.map((n) => `[${n.version}] ${n.note}`).join(' | ') || 'no notes'),
+        );
+      },
+      /** Force the update prompt open (bypasses the snooze). */
+      showUpdatePrompt: async () => {
+        const updates = await pluginHost.checkForUpdates();
+        if (updates.length === 0) return 'no updates';
+        localStorage.removeItem(UPDATE_DISMISS_KEY);
+        setPluginUpdates(updates);
+        return `prompt open with ${updates.length} update(s)`;
+      },
+      setRegistry: async (url: string) => {
+        const { setRegistryUrl } = await import('./plugins/host');
+        setRegistryUrl(url);
+        return `registry -> ${url || 'default'}`;
+      },
+      /** Render a plugin action's preview face (sandboxed onAssign). */
+      pluginPreview: async (actionId: string, settings?: Record<string, string>) => {
+        const url = await pluginHost.previewFace(actionId, settings ?? {});
+        return url ?? 'no preview';
+      },
+      pluginSettingsSpec: (pluginId: string) =>
+        pluginHost.getSettingsSpec(pluginId)?.fields.map((f) => f.key) ?? 'none',
+      applyStarter: async (id: string) => {
+        const { STARTER_PROFILES } = await import('./assets/starterProfiles');
+        const starter = STARTER_PROFILES.find((s) => s.id === id);
+        if (!starter) return `unknown starter: ${id}`;
+        handleApplyStarter(starter);
+        return `applied ${starter.name}`;
+      },
       pluginScaffold: (id: string) => pluginHost.scaffold(id),
       /** Execute a plugin action and return the log lines it produced. */
       pluginExec: async (actionId: string, settings: Record<string, string>, slot = 0) => {
@@ -715,6 +825,18 @@ export default function App() {
         try {
           await pluginHost.execute(actionId, settings, slot);
           await new Promise((r) => setTimeout(r, 400)); // async logs settle
+        } finally {
+          pluginLogTapRef.current = null;
+        }
+        return lines;
+      },
+      /** Fire a plugin's onAssign hook (branded face) and return its logs. */
+      pluginAssign: async (actionId: string, settings: Record<string, string>, slot = 0) => {
+        const lines: string[] = [];
+        pluginLogTapRef.current = (l) => lines.push(l);
+        try {
+          await pluginHost.notifyAssigned(actionId, settings, slot);
+          await new Promise((r) => setTimeout(r, 400));
         } finally {
           pluginLogTapRef.current = null;
         }
@@ -1167,6 +1289,7 @@ export default function App() {
     },
     [checkpoint, device],
   );
+  const assignNotifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editActionChange = useCallback(
     (
       level: Parameters<typeof keyActions.setAction>[1],
@@ -1174,6 +1297,16 @@ export default function App() {
     ) => {
       checkpoint();
       keyActions.setAction(selectedSlot!, level, a);
+      // Plugin actions own their key's look — let the plugin paint it.
+      // Debounced so typing in a settings field repaints once, not per key.
+      if (a?.type === 'plugin' && a.plugin) {
+        const { plugin, settings } = a;
+        const slot = selectedSlot!;
+        if (assignNotifyTimer.current) clearTimeout(assignNotifyTimer.current);
+        assignNotifyTimer.current = setTimeout(() => {
+          void pluginHost.notifyAssigned(plugin, settings, slot);
+        }, 500);
+      }
     },
     [checkpoint, keyActions, selectedSlot],
   );
@@ -1193,6 +1326,9 @@ export default function App() {
           <Confetti />
           <div className="celebration-text">{celebration}</div>
         </div>
+      )}
+      {pluginUpdates && !onboarding && (
+        <PluginUpdatePrompt updates={pluginUpdates} onClose={() => setPluginUpdates(null)} />
       )}
       <IconRail
         activeView={activeView}
@@ -1288,6 +1424,7 @@ export default function App() {
                     onExport={handleExportProfile}
                     onImport={handleImportProfiles}
                     onExportAll={exportAllProfiles}
+                    onApplyStarter={handleApplyStarter}
                   />
                 )}
                 {activeView === 'plugins' && <PluginsView />}

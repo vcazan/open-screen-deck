@@ -63,7 +63,7 @@ export const ACTION_TYPE_META: Record<
   obs_scene: {
     label: 'OBS scene',
     needsCompanion: false,
-    hint: 'Switches scenes via obs-websocket (configure in Settings).',
+    hint: 'Switches scenes via obs-websocket (connection managed by the OBS Control plugin).',
   },
   page_next: {
     label: 'Next page',

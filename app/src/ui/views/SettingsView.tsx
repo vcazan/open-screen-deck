@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { obsClient, loadObsSettings, saveObsSettings } from '../../integrations/obs';
 import { isTauri } from '../../transport/TauriSerialTransport';
 import { Button } from '../components/Button';
-import { Input } from '../components/Input';
 import { FirmwareCard } from './FirmwareCard';
 
 interface SettingsViewProps {
@@ -11,21 +9,7 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({ deviceFw = null, usbConnected = false }: SettingsViewProps) {
-  const [obs, setObs] = useState(loadObsSettings);
-  const [obsConnected, setObsConnected] = useState(obsClient.isConnected());
-  const [obsScene, setObsScene] = useState<string | null>(obsClient.getCurrentScene());
-  const [obsError, setObsError] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
   const [autostart, setAutostart] = useState(false);
-
-  useEffect(() => {
-    const unStatus = obsClient.onStatus(setObsConnected);
-    const unScene = obsClient.onScene(setObsScene);
-    return () => {
-      unStatus();
-      unScene();
-    };
-  }, []);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -34,23 +18,6 @@ export function SettingsView({ deviceFw = null, usbConnected = false }: Settings
       .then(setAutostart)
       .catch(() => {});
   }, []);
-
-  const handleObsConnect = async () => {
-    setObsError(null);
-    setConnecting(true);
-    saveObsSettings(obs);
-    try {
-      await obsClient.connect(obs.url, obs.password);
-    } catch (err) {
-      setObsError(err instanceof Error ? err.message : 'Connection failed');
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleObsDisconnect = () => {
-    obsClient.disconnect();
-  };
 
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
@@ -85,60 +52,6 @@ export function SettingsView({ deviceFw = null, usbConnected = false }: Settings
   return (
     <div className="settings-view">
       <div className="settings-stack">
-        <div className="settings-card">
-          <h2>OBS Studio</h2>
-          <p className="muted">
-            Connect to obs-websocket (OBS → Tools → WebSocket Server Settings) to switch scenes
-            from keys and show the live scene on the deck.
-          </p>
-          <div className="settings-obs-form">
-            <Input
-              label="WebSocket URL"
-              value={obs.url}
-              onChange={(e) => setObs({ ...obs, url: e.target.value })}
-              placeholder="ws://127.0.0.1:4455"
-            />
-            <Input
-              label="Password"
-              type="password"
-              value={obs.password}
-              onChange={(e) => setObs({ ...obs, password: e.target.value })}
-              placeholder="From OBS WebSocket settings"
-            />
-            <label className="sidebar-toggle">
-              <input
-                type="checkbox"
-                className="custom-checkbox"
-                checked={obs.autoConnect}
-                onChange={(e) => {
-                  const next = { ...obs, autoConnect: e.target.checked };
-                  setObs(next);
-                  saveObsSettings(next);
-                }}
-              />
-              <span>Connect automatically on launch</span>
-            </label>
-            <div className="settings-obs-actions">
-              {obsConnected ? (
-                <>
-                  <span className="obs-status ok">
-                    <span className="status-dot connected" /> Connected
-                    {obsScene ? ` · scene: ${obsScene}` : ''}
-                  </span>
-                  <Button variant="ghost" onClick={handleObsDisconnect}>
-                    Disconnect
-                  </Button>
-                </>
-              ) : (
-                <Button variant="primary" onClick={handleObsConnect} disabled={connecting}>
-                  {connecting ? 'Connecting…' : 'Connect'}
-                </Button>
-              )}
-            </div>
-            {obsError && <div className="storage-error">{obsError}</div>}
-          </div>
-        </div>
-
         <FirmwareCard deviceFw={deviceFw} usbConnected={usbConnected} />
 
         <div className="settings-card">

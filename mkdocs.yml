@@ -103,21 +103,26 @@ not_in_nav: |
 
 nav:
   - Home: index.md
-  - Getting Started:
+  - Build It:
     - Parts List: getting-started/parts.md
     - 3D Printing: getting-started/printing.md
-  - Build:
     - Assembly Guide: build/assembly.md
     - Fab Checklist: build/fab-checklist.md
-  - Firmware:
-    - Flashing: firmware/flashing.md
-    - Serial Protocol: firmware/protocol.md
   - Hardware:
     - Overview: hardware/overview.md
     - Mechanical: hardware/mechanical.md
     - PCB Design: hardware/pcb.md
     - ScreenKey Module: hardware/screenkey-module.md
     - Architecture: hardware/architecture.md
+  - Firmware:
+    - Flashing: firmware/flashing.md
+    - Serial Protocol: firmware/protocol.md
+  - App:
+    - Overview: app/index.md
+    - Development: app/development.md
+  - Plugins:
+    - Directory: plugins/index.md
+    - Developer Center: plugins/develop.md
   - About:
     - License: about/license.md
     - Related Projects: about/related.md

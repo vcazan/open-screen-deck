@@ -1,7 +1,8 @@
 {
   "id": "system-actions",
   "name": "System Actions",
-  "version": "1.0.0",
-  "description": "Lock the screen, sleep the displays, empty the trash, toggle dark mode.",
-  "main": "main.js"
+  "version": "2.1.0",
+  "description": "Lock screen, sleep displays, empty trash, toggle dark mode \u2014 each with its own drawn face.",
+  "main": "main.js",
+  "icon": "icon.svg"
 }

@@ -143,6 +143,11 @@ class ObsClient {
     await this.request('SetCurrentProgramScene', { sceneName: scene });
   }
 
+  /** Arbitrary obs-websocket v5 request — the plugin bridge rides this. */
+  call(requestType: string, requestData: Record<string, unknown> = {}): Promise<unknown> {
+    return this.request(requestType, requestData);
+  }
+
   private request(requestType: string, requestData: Record<string, unknown>): Promise<unknown> {
     const ws = this.ws;
     if (!ws || !this.connected) return Promise.reject(new Error('OBS not connected'));
