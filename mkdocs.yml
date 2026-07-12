@@ -30,7 +30,8 @@ theme:
     code: IBM Plex Mono
   features:
     - navigation.tabs
-    - navigation.sections
+    - navigation.indexes
+    - navigation.expand
     - navigation.top
     - navigation.footer
     - navigation.instant
@@ -90,38 +91,41 @@ extra:
       link: https://discord.gg/PVCzBBeGQX
       name: Discord
 
-not_in_nav: |
-  software_plan.md
-  assembly.md
-  protocol.md
-  mechanical_contract.md
-  pcb_design_brief.md
-  product_architecture.md
-  fab_checklist.md
-  MASTER_PLAN.md
-  reference/**
+# Internal working documents — kept in the repo for contributors, never
+# published to the site (superseded by the pages under nav)
+exclude_docs: |
+  /software_plan.md
+  /assembly.md
+  /protocol.md
+  /mechanical_contract.md
+  /pcb_design_brief.md
+  /product_architecture.md
+  /fab_checklist.md
+  /MASTER_PLAN.md
+  /reference/
 
 nav:
   - Home: index.md
   - Build It:
+    - build/index.md
     - Parts List: getting-started/parts.md
     - 3D Printing: getting-started/printing.md
     - Assembly Guide: build/assembly.md
     - Fab Checklist: build/fab-checklist.md
   - Hardware:
-    - Overview: hardware/overview.md
-    - Mechanical: hardware/mechanical.md
-    - PCB Design: hardware/pcb.md
-    - ScreenKey Module: hardware/screenkey-module.md
+    - hardware/index.md
     - Architecture: hardware/architecture.md
+    - PCB Design: hardware/pcb.md
+    - Mechanical: hardware/mechanical.md
+    - ScreenKey Module: hardware/screenkey-module.md
   - Firmware:
     - Flashing: firmware/flashing.md
     - Serial Protocol: firmware/protocol.md
   - App:
-    - Overview: app/index.md
+    - app/index.md
     - Development: app/development.md
   - Plugins:
-    - Directory: plugins/index.md
+    - plugins/index.md
     - Developer Center: plugins/develop.md
   - About:
     - License: about/license.md

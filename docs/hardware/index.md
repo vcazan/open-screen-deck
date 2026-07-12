@@ -15,7 +15,7 @@ Open Screen Deck is a 6-key macro pad where every key is a self-contained
 | **Screens** | 128×128 IPS per key, ST7735, shared SPI |
 | **MCU** | ESP32-S3-WROOM-1-N16R8 (16 MB flash, 8 MB PSRAM) soldered on carrier |
 | **Carrier PCB** | 55 × 112 mm, 2-layer, ENIG, matte black |
-| **Host link** | USB-C → HID keyboard (F13–F18) + CDC serial at 115200 baud |
+| **Host link** | USB-C → HID keyboard (F13–F24) + CDC serial at 115200 baud |
 | **Media** | microSD for on-device icons/animations, or stream frames over USB |
 | **Enclosure** | 59.7 × 116.7 × 28.2 mm flat deck + optional 25° stand |
 | **Fasteners** | 4× M2×25 corner screws through module nuts; 12× M2×5 module screws |

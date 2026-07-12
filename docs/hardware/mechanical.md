@@ -71,7 +71,7 @@ standoff positions.
 | Enclosure slot | 10.5 × 4.8 mm @ rear wall (unchanged) |
 | Power | USB 5 V → on-board 3.3 V LDO |
 
-**No DevKit pocket.** One USB-C cable plugs directly into the deck.
+One USB-C cable plugs directly into the deck — power, HID, and config.
 
 ---
 

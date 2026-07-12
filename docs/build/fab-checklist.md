@@ -38,16 +38,16 @@ chmod +x scripts/build_hardware.sh
 6. Mount modules per [Assembly Guide](assembly.md) (M2×5 into factory standoffs; corner
    spacers at H1–H4 for the M2×25 case screws)  
 7. Plug **6× ScreenKey** cables (in-box 200 mm; fold slack flat)  
-8. Flash firmware (`firmware/main.cpp`) — USB-C on board, not dev kit  
+8. Flash firmware over the on-board USB-C — see [Flashing](../firmware/flashing.md)  
 
 ## Bring-up tests
 
 - [ ] USB-C powers board; 3.3 V at module connectors  
 - [ ] All six displays init (SPI)  
 - [ ] All six keys debounce  
-- [ ] HID F13–F18 on Mac/Win/Linux  
+- [ ] HID F13–F18 typed on Mac/Win/Linux (page 1 defaults)  
 - [ ] CDC serial: `PING` → `pong`  
-- [ ] microSD mounts (firmware v0.4+)  
+- [ ] microSD mounts (`SD_INFO` reports the card)  
 
 ## Enclosure fit
 

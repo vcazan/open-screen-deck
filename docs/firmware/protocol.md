@@ -27,7 +27,7 @@ under the companion alike):
 Boot:
 
 ```json
-{"event":"info","name":"Open Screen Deck","fw":"0.10.0","proto":10,"keys":6,"pages":4,"page":0,"mode":"hid"}
+{"event":"info","name":"Open Screen Deck","fw":"0.12.0","proto":12,"keys":6,"pages":2,"page":0,"orient":0,"mode":"hid"}
 ```
 
 Key press / release (`index` is the global slot; `taps` from v0.12):
@@ -190,7 +190,7 @@ Removes a file (or an empty directory). Responds
 
 ### `GET_KEYS` response lines
 
-One line per global slot (24 lines from v0.10):
+One line per global slot (6 × current page count):
 
 ```json
 {"event":"key_state","index":0,"page":0,"label":"MUTE","sublabel":"Toggle","hid":240,"bg":19049,"ov":0}

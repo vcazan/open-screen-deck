@@ -23,6 +23,30 @@
   max-width: 100%;
 }
 
+/* Home hero */
+.hero-tagline {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  max-width: 34rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.35rem;
+}
+
+.hero-actions .md-button {
+  margin: 0;
+}
+
+.hero-version {
+  font-size: 0.64rem;
+  color: var(--md-default-fg-color--light);
+  margin: 0 0 1rem;
+}
+
 /* App screenshots */
 .app-shot {
   border-radius: 12px;

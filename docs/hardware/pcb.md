@@ -25,16 +25,15 @@ Fab outputs live in `hardware/pcb/gerbers/`.
 
 ```
 ┌──────────────────────────────────────┐  ← 55 mm
-│  [J1]        [J2]     row 0 (back) │
-│  25.94×35.29  each                   │
-│  [J3]        [J4]     row 1          │  112 mm
+│ SW2·[U2][U3]·[USB-C J7]·[SW1]  rear │
 │                                      │
-│  [J5]        [J6]     row 2 (front)│
-│                                      │
-│  ┌── ESP32 header footprint ──┐      │
-│  │  (connects to DevKit in    │      │
-│  │   shell pocket, rear)      │      │
+│  [J1]        [J2]     row 0 (back)   │
+│     [U1 ESP32-S3, between rows]      │  112 mm
+│  [J3]        [J4]     row 1          │
+│                          [J8 microSD]│
+│  [J5]        [J6]     row 2 (front)  │
 └──────────────────────────────────────┘
+   modules 25.94 × 35.29 mm, 3 mm gap
 ```
 
 ### J1–J6 centres (board origin 0,0 = back-left)
@@ -127,14 +126,19 @@ All Ø2.2 (M2 free fit):
 
 | Qty | Ref | Part |
 |-----|-----|------|
-| 6 | J1–J6 | 9-pin 1.25 mm receptacle (MX1.25 compatible) |
-| 1 | U1 | ESP32-S3 DevKitC-1 (socketed) |
-| 2 | — | 1×20 2.54 mm female headers |
+| 1 | U1 | ESP32-S3-WROOM-1-N16R8 (soldered) |
+| 6 | J1–J6 | Molex PicoBlade 53261-0971 — 9-pin 1.25 mm right-angle |
+| 1 | J7 | USB-C receptacle, GCT USB4105 |
+| 1 | J8 | microSD, Hirose DM3D-SF push-push |
+| 1 | U2 | AP2112K-3.3 LDO |
+| 1 | U3 | USBLC6-2SC6 USB ESD protection |
+| 2 | SW1, SW2 | BOOT / RESET tactile switches |
 | 6 | C1–C6 | 100 nF 0402 |
 | 1 | C7 | 10 µF 0805 |
-| 6 | — | Waveshare MX1.25 9P cable (200 mm, trim as needed) |
-| 4 | — | M2×25 case screws + RX-M2x4 inserts (see hardware/bom_assembly.csv) |
-| 4 | — | 10 mm rubber feet |
+| 6 | — | Waveshare MX1.25 9P cable (included with each module) |
+
+Full line-item board BOM: `hardware/pcb/bom.csv`. Case fasteners and feet
+are in the [parts list](../getting-started/parts.md).
 
 ---
 
