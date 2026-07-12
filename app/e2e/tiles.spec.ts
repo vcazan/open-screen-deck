@@ -11,10 +11,11 @@ test.describe('live tiles', () => {
     await pickAction(page, 'tile:clock');
     await page.waitForTimeout(1200); // first paint
     const first = await faceFingerprint(page, 2);
-    // clock blinks its colon every second — the face must change
-    await page.waitForTimeout(1600);
-    const second = await faceFingerprint(page, 2);
-    expect(second).not.toBe(first);
+    // The clock blinks its colon every second — poll until the face
+    // changes (fixed waits flake on slow CI runners)
+    await expect
+      .poll(() => faceFingerprint(page, 2), { timeout: 8000 })
+      .not.toBe(first);
   });
 
   test('timer tile starts and stops on key press', async ({ page }) => {

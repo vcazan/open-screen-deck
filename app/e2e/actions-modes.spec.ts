@@ -51,7 +51,7 @@ test.describe('actions and deck modes', () => {
     await selectKey(page, 2);
     await pickAction(page, 'hotkey');
     await page.locator('.hotkey-record-btn').first().click();
-    await page.keyboard.press('Meta+Shift+KeyM');
+    await page.keyboard.press('ControlOrMeta+Shift+KeyM');
     await page.waitForTimeout(300);
     const actions = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('osd-key-actions-v2') ?? '{}').single ?? [],

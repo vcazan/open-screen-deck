@@ -106,7 +106,7 @@ test.describe('dynamic multi-page decks', () => {
     await page.waitForTimeout(800);
     await expect(pageTabs(page)).toHaveCount(1);
 
-    await page.keyboard.press('Meta+z');
+    await page.keyboard.press('ControlOrMeta+z');
     await page.waitForTimeout(1200);
     await expect(pageTabs(page)).toHaveCount(2);
     const nvs = await page.evaluate(() =>

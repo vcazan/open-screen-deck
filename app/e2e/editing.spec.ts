@@ -44,11 +44,11 @@ test.describe('pro editing: swap, copy/paste, undo/redo', () => {
     await page.waitForTimeout(1200);
     expect((await nvsLabels(page))[0]).toBe('SCENE 1');
 
-    await page.keyboard.press('Meta+z');
+    await page.keyboard.press('ControlOrMeta+z');
     await page.waitForTimeout(1200);
     expect((await nvsLabels(page))[0]).toBe('MUTE');
 
-    await page.keyboard.press('Meta+Shift+z');
+    await page.keyboard.press('ControlOrMeta+Shift+z');
     await page.waitForTimeout(1200);
     expect((await nvsLabels(page))[0]).toBe('SCENE 1');
   });
@@ -58,7 +58,7 @@ test.describe('pro editing: swap, copy/paste, undo/redo', () => {
     await page.locator('.field-input').first().fill('UNDOME');
     await page.waitForTimeout(2000); // well past the coalesce window (slow CI)
     await page.keyboard.press('Escape');
-    await page.keyboard.press('Meta+z');
+    await page.keyboard.press('ControlOrMeta+z');
     // Undo replays a full deck snapshot — poll instead of a fixed wait
     await expect
       .poll(
@@ -73,10 +73,10 @@ test.describe('pro editing: swap, copy/paste, undo/redo', () => {
 
   test('copy a key and paste it onto another', async ({ page }) => {
     await selectKey(page, 0);
-    await page.keyboard.press('Meta+c');
+    await page.keyboard.press('ControlOrMeta+c');
     await page.keyboard.press('Escape');
     await selectKey(page, 5);
-    await page.keyboard.press('Meta+v');
+    await page.keyboard.press('ControlOrMeta+v');
     await page.waitForTimeout(1200);
     const labels = await nvsLabels(page);
     expect(labels[5]).toBe('MUTE');
@@ -85,13 +85,13 @@ test.describe('pro editing: swap, copy/paste, undo/redo', () => {
 
   test('undo restores a pasted-over key', async ({ page }) => {
     await selectKey(page, 0);
-    await page.keyboard.press('Meta+c');
+    await page.keyboard.press('ControlOrMeta+c');
     await page.keyboard.press('Escape');
     await selectKey(page, 4);
-    await page.keyboard.press('Meta+v');
+    await page.keyboard.press('ControlOrMeta+v');
     await page.waitForTimeout(1200);
     await page.keyboard.press('Escape');
-    await page.keyboard.press('Meta+z');
+    await page.keyboard.press('ControlOrMeta+z');
     await page.waitForTimeout(1000);
     const nvs = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('osd-simulator-nvs-v2') ?? '[]'),
