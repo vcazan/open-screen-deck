@@ -23,6 +23,86 @@
   max-width: 100%;
 }
 
+/* ── Tab dropdowns: section pages visible from the main menu ── */
+.md-tabs,
+.md-tabs .md-grid,
+.md-tabs__list {
+  overflow: visible;
+  /* the theme sets contain: content, which paint-clips the dropdowns */
+  contain: none;
+}
+
+.md-tabs__item--dropdown {
+  position: relative;
+}
+
+.md-tabs__caret {
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  opacity: 0.55;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.md-tabs__item--dropdown:hover .md-tabs__caret,
+.md-tabs__item--dropdown:focus-within .md-tabs__caret {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.md-tabs__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, 6px);
+  min-width: 11rem;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--md-default-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.18s;
+  z-index: 4;
+}
+
+[data-md-color-scheme="slate"] .md-tabs__dropdown {
+  background: #14181d;
+}
+
+.md-tabs__item--dropdown:hover .md-tabs__dropdown,
+.md-tabs__item--dropdown:focus-within .md-tabs__dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.md-tabs__dropdown li {
+  margin: 0;
+  padding: 0;
+}
+
+.md-tabs__dropdown a {
+  display: block;
+  padding: 0.42rem 0.7rem;
+  border-radius: 7px;
+  color: var(--md-default-fg-color);
+  font-size: 0.66rem;
+  white-space: nowrap;
+  transition: background 0.12s cubic-bezier(0.2, 0, 0, 1), color 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-tabs__dropdown a:hover,
+.md-tabs__dropdown a:focus {
+  background: var(--md-accent-fg-color--transparent);
+  color: var(--md-accent-fg-color);
+}
+
 /* Home hero */
 .hero-tagline {
   font-size: 0.92rem;
