@@ -5,13 +5,13 @@
       "Application": "Pcbnew",
       "Version": "10.0.4"
     },
-    "CreationDate": "2026-07-05T07:17:25-04:00"
+    "CreationDate": "2026-07-13T22:32:36-04:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "data_streamdeck",
       "GUID": "64617461-5f73-4747-9265-616d6465636b",
-      "Revision": "rev?"
+      "Revision": "C"
     },
     "Size": {
       "X": 55.1,
@@ -76,6 +76,16 @@
     {
       "Path": "data_streamdeck-Edge_Cuts.gm1",
       "FileFunction": "Profile",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "data_streamdeck-F_Fab.gbr",
+      "FileFunction": "AssemblyDrawing,Top",
+      "FilePolarity": "Positive"
+    },
+    {
+      "Path": "data_streamdeck-B_Fab.gbr",
+      "FileFunction": "AssemblyDrawing,Bot",
       "FilePolarity": "Positive"
     }
   ],

@@ -1,39 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Open Screen Deck — engineering previews</title>
-<style>
-  body { background:#101014; color:#e8e8ee; font:15px/1.5 system-ui, sans-serif; margin:0; padding:32px; }
-  h1 { font-size:1.3rem; } h2 { font-size:1rem; color:#9a9aa5; margin:34px 0 10px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px; }
-  figure { margin:0; background:#17171c; border:1px solid #26262c; border-radius:10px; overflow:hidden; }
-  img { width:100%; display:block; }
-  figcaption { padding:8px 12px; font-size:.82rem; color:#9a9aa5; }
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Open Screen Deck — Hardware Preview</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0d0d0f; --fg:#e8e8ec; --muted:#888; --accent:#4a9eff; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--fg); margin: 0; padding: 2rem; }
+    h1 { font-size: 1.4rem; font-weight: 600; margin: 0 0 .25rem; }
+    .meta { color: var(--muted); font-size: .85rem; margin-bottom: 2rem; }
+    .meta code { color: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; }
+    figure { margin: 0; background: #16161a; border-radius: 12px; overflow: hidden; border: 1px solid #2a2a30; }
+    figcaption { padding: .75rem 1rem; font-size: .8rem; color: var(--muted); }
+    img { width: 100%; display: block; background: #1a1a1f; }
+    a { color: var(--accent); }
+  </style>
 </head>
 <body>
-<h1>Engineering previews — current revision (PCB rev B / enclosure v11)</h1>
-
-<h2>Product mocks</h2>
-<div class="grid">
-  <figure><img src="hero_photoreal.png"><figcaption>Hero mock (photoreal render)</figcaption></figure>
-  <figure><img src="mock_top_on.png"><figcaption>Top view, screens on (CAD-accurate)</figcaption></figure>
-  <figure><img src="mock_iso_black.png"><figcaption>3/4 view, matte black (CAD-accurate)</figcaption></figure>
-</div>
-
-<h2>PCB</h2>
-<div class="grid">
-  <figure><img src="pcb-top.png"><figcaption>Carrier top — routed</figcaption></figure>
-  <figure><img src="pcb-bottom.png"><figcaption>Carrier bottom — routed</figcaption></figure>
-  <figure><img src="schematic.svg"><figcaption>Schematic</figcaption></figure>
-</div>
-
-<h2>Assembly (Fusion)</h2>
-<div class="grid">
-  <figure><img src="fusion_v11_hero.png"><figcaption>Full assembly</figcaption></figure>
-  <figure><img src="fusion_v11_corner_aligned.png"><figcaption>Corner screw stack</figcaption></figure>
-  <figure><img src="screenkey-module-v2.png"><figcaption>ScreenKey module model</figcaption></figure>
-</div>
+  <h1>Open Screen Deck — Hardware Preview</h1>
+  <p class="meta">Generated <strong>2026-07-13 22:34:03</strong> · Run <code>./scripts/hardware-preview.sh</code> to refresh</p>
+  <div class="grid">
+    <figure><img src="enclosure-ghost.png" alt="Ghost assembly"/><figcaption>Ghost — internal fit (PCB + modules)</figcaption></figure>
+    <figure><img src="enclosure-keys.png" alt="Key face"/><figcaption>User view — 6 key face (what you see on desk)</figcaption></figure>
+    <figure><img src="enclosure-assembled.png" alt="Assembled shells"/><figcaption>Assembled — matte shell, closed</figcaption></figure>
+    <figure><img src="enclosure-side.png" alt="Side profile"/><figcaption>Side — wedge tilt (~29° face)</figcaption></figure>
+    <figure><img src="enclosure-front.png" alt="Front perspective"/><figcaption>Front — user-facing angle</figcaption></figure>
+    <figure><img src="schematic.svg" alt="Schematic"/><figcaption>KiCad schematic</figcaption></figure>
+  </div>
 </body>
 </html>

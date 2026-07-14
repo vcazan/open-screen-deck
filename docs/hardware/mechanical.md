@@ -1,11 +1,11 @@
-# Mechanical Contract — Enclosure ↔ PCB (v11 / Tier B)
+# Mechanical Contract — Enclosure ↔ PCB (v12 / Tier B)
 
 Single source of truth for physical interfaces.  
 **Module reference:** [ScreenKey Module](screenkey-module.md) (Waveshare SKU **34168**)
 
 ---
 
-## Outer envelope (v11 — flat deck + separate stand)
+## Outer envelope (v12 — flat deck + separate stand)
 
 The deck body is a flat slab; a separate printed stand provides the desk angle.
 
@@ -28,7 +28,7 @@ The deck body is a flat slab; a separate printed stand provides the desk angle.
 | Orientation | Flat in bottom shell, centred under key grid |
 | MCU | **ESP32-S3-WROOM-1-N16R8** soldered on board |
 | USB | **USB-C receptacle** on PCB @ **X=27.5 mm, Y=0** (rear edge) |
-| Storage | **microSD** @ **X=47.5 mm, Y=75 mm** (right-wall access slot, between J4/J6) |
+| Storage | **microSD** @ **X=47.5 mm, Y=75 mm** (side access slot, between J4/J6) |
 | ScreenKey | 6× JST GH 9P @ J1–J6 (see below) |
 
 ### Corner case-screw holes H1–H4 (Ø2.2, board origin = back-left)
@@ -80,13 +80,13 @@ One USB-C cable plugs directly into the deck — power, HID, and config.
 | Parameter | Value |
 |-----------|-------|
 | Connector | Hirose DM3D-SF class push-push |
-| PCB position | **X = 47.5 mm, Y = 75 mm** (card ejects through right wall) |
-| Enclosure | Right-wall slot in bottom shell @ PCB Y=75 |
+| PCB position | **X = 47.5 mm, Y = 75 mm**, card mouth toward the x=55 edge |
+| Enclosure | Side-wall slot in the bottom shell @ PCB Y=75, on the wall adjacent to the kicad x=55 edge (the deck's right side as you face the keys, USB at rear) |
 | Filesystem | FAT32, `/osd/` tree (see [Architecture](architecture.md)) |
 
 ---
 
-## Fasteners (v11 — one-screw corner stack)
+## Fasteners (v12 — one-screw corner stack)
 
 The ScreenKey module is a **dual-PCB sandwich**: front PCB (switch/LCD) and
 rear PCB (9P connector) joined by **soldered M2 nuts** at the 22.0 × 25.3
@@ -129,7 +129,7 @@ One screw per corner marries **bottom tray + carrier + module + top shell**.
 |-------|----------|----------|
 | Whole stack (tray + carrier + module + top) | 4× **M2×25 countersunk flat head** (DIN 965) from below, hidden under the rubber feet | Corner module's **soldered M2 nut** (pass-through), then **Ruthex RX-M2x4** insert in the top-shell plate |
 | Module → carrier | 12× **M2×5 hex socket cap** (ISO 4762) from carrier underside | Module's **factory brass standoffs** (female M2 tips) |
-| Corner spacing | 4× **printed spacer sleeve** Ø4 × 9.7, Ø2.4 bore (`stl/corner_spacers_x4_v11.stl`) | sits between carrier and corner-module nut |
+| Corner spacing | 4× **printed spacer sleeve** Ø4 × 9.7, Ø2.4 bore (`stl/corner_spacers_x4_v12.stl`) | sits between carrier and corner-module nut |
 | Feet | 8× Ø10 self-adhesive rubber (deck + stand); the 4 deck feet cover the corner screw heads | — |
 
 The factory standoffs (and corner sleeves) are 9.7 mm — exactly clearing the

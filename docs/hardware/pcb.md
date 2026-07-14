@@ -55,7 +55,7 @@ Grid: 2×3, module **25.94 × 35.29 mm**, **3 mm** gap.
 |-----|------|----------|-------|
 | U1 | ESP32-S3-WROOM-1-N16R8 | (27.5, 35.2) rot 90 | Between J1/J2 and J3/J4; antenna keep-out overlaps accepted (WiFi unused) |
 | J7 | USB-C GCT USB4105 (horizontal) | (27.5, 3.1) rot 180 | Port exits rear edge Y=0; "PCB Edge" marker on outline |
-| J8 | microSD Hirose DM3D-SF | (47.5, 75.0) rot 270 | Card ejects right wall; ≥6 mm from U1 |
+| J8 | microSD Hirose DM3D-SF | (47.5, 75.0) rot 90 | Card mouth faces the x=55 edge — inserts through the case wall (Rev C: was flipped inward in Rev B) |
 | U2 | AP2112K-3.3 LDO | (8.5, 7.5) | VBUS→3V3 |
 | U3 | USBLC6-2SC6 ESD | (21.0, 6.8) | USB D+/D−/VBUS protection |
 | SW1 | BOOT button | (40.0, 5.8) | GPIO0 strap |

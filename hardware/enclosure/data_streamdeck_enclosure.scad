@@ -1,5 +1,5 @@
 // ============================================================
-//  Open Screen Deck — Enclosure v11  "one-screw corner stack"
+//  Open Screen Deck — Enclosure v12  "one-screw corner stack"
 //
 //  ASSEMBLY-FIRST architecture — modules keep their FACTORY brass
 //  standoffs; the 4 CASE screws run straight through the corner
@@ -79,9 +79,14 @@ MODF_Z  = REAR_Z + MOD_BODY;                  // 23.0 (module front face)
 TOTAL_H = MODF_Z + 0.2 + PLATE_T;             // 25.4
 CAP_TOP = MODF_Z + CAP_PROUD;                 // 31.6 (proud 6.2)
 
-// ── Ports (PCB coords: USB x=27.5 rear, SD y=75 right) ──────
+// ── Ports ───────────────────────────────────────────────────
+// KiCad views the board from the top with +y DOWN, so once the PCB drops
+// component-up into the tray, kicad +x lands on the enclosure's -x side:
+//   enclosure_x = PCB_OX + (PCB_W - kicad_x)
+// USB (kicad x=27.5, centred) is mirror-invariant; J8 (kicad x=47.5,
+// card ejects the kicad x=55 edge) is adjacent to the enclosure x=0 wall.
 USB_W = 10.0;  USB_H = 4.4;  USB_R = 1.5;
-USB_CX = PCB_OX + 27.5;
+USB_CX = PCB_OX + (PCB_W - 27.5);
 USB_CZ = PCB_Z + PCB_TH + 1.7;
 SD_W = 13.0;  SD_H = 3.0;
 SD_CY = PCB_OY + 75.0;
@@ -107,11 +112,12 @@ POST_OD  = 7.0;                  // PCB perch posts under the corners
 INSERT_D = 3.2;  INSERT_L = 4.2; // Ruthex RX-M2x4
 SPACER_OD = 4.0; SPACER_BORE = 2.4;  // printed corner sleeve, 9.7 long
 FOOT_OFF  = 1.8;                 // foot centre offset (diagonal, inboard) from screw axis
+// (kicad x mirrors into the enclosure: x_e = PCB_OX + PCB_W − x_kicad)
 CORNER_POS = [
-    [PCB_OX + 2.0,   PCB_OY + 4.95],
-    [PCB_OX + 52.9,  PCB_OY + 4.95],
-    [PCB_OX + 2.0,   PCB_OY + 106.85],
-    [PCB_OX + 52.9,  PCB_OY + 106.85]
+    [PCB_OX + 53.0,  PCB_OY + 4.95],
+    [PCB_OX + 2.1,   PCB_OY + 4.95],
+    [PCB_OX + 53.0,  PCB_OY + 106.85],
+    [PCB_OX + 2.1,   PCB_OY + 106.85]
 ];
 
 // ── Stand ───────────────────────────────────────────────────
@@ -229,9 +235,12 @@ module bottom_shell() {
             linear_extrude(0.9) rsq2d(USB_W + 3, USB_H + 3, USB_R + 1);
         }
 
-        translate([INNER_W + 0.1, SD_CY, SD_CZ]) rotate([0, -90, 0]) {
+        // microSD slot — LEFT wall (x=0): J8 sits at kicad x=47.5 and its
+        // card mouth faces the kicad x=55 edge, which the mirror mapping
+        // places against this wall (v11 had it on the wrong side)
+        translate([-0.1, SD_CY, SD_CZ]) rotate([0, 90, 0]) {
             linear_extrude(WALL + 1.2) rsq2d(SD_H, SD_W, 1.2);
-            linear_extrude(0.8) rsq2d(SD_H + 2.4, SD_W + 3, 1.8);
+            linear_extrude(0.8) rsq2d(SD_H + 2.4, SD_W + 3, 1.8);   // finger lead-in
         }
 
         for (p = CORNER_POS) {
@@ -365,7 +374,7 @@ if (RENDER == "bottom") {
     modules_ghost();
 }
 
-echo("=== Open Screen Deck enclosure v11 (one-screw corner stack) ===");
+echo("=== Open Screen Deck enclosure v12 (one-screw corner stack) ===");
 echo(str("Deck ", INNER_W, " x ", INNER_D, " x ", TOTAL_H, " mm | caps to ", CAP_TOP));
 echo(str("Carrier top z=", PCB_Z + PCB_TH, " | rear PCB z=", REAR_Z, " | module front z=", MODF_Z));
 echo("Assembly: modules->carrier (M2x5), cables, tray, snap top, 4x M2x25 corner screws through module nuts");
