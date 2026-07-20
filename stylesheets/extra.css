@@ -1,0 +1,188 @@
+/* Brand accent — amber on slate */
+[data-md-color-scheme="slate"] {
+  --md-accent-fg-color: #f5b82e;
+  --md-accent-fg-color--transparent: #f5b82e1a;
+  --md-primary-fg-color: #121212;
+  --md-primary-fg-color--light: #1e1e1e;
+  --md-primary-fg-color--dark: #0a0a0a;
+}
+
+[data-md-color-scheme="default"] {
+  --md-accent-fg-color: #d99a1a;
+  --md-accent-fg-color--transparent: #d99a1a1a;
+  --md-primary-fg-color: #121212;
+  --md-primary-fg-color--light: #2a2a2a;
+  --md-primary-fg-color--dark: #0a0a0a;
+}
+
+/* Hero image on landing page */
+.hero-image {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  margin-bottom: 1.5rem;
+  max-width: 100%;
+}
+
+/* ── Sidebar navigation: full tree, sections stand out ── */
+.md-nav--primary > .md-nav__list > .md-nav__item--section > label.md-nav__link,
+.md-nav__item--section > .md-nav__link {
+  font-weight: 700;
+  color: var(--md-default-fg-color);
+}
+
+/* Home hero */
+.hero-tagline {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  max-width: 34rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.35rem;
+}
+
+.hero-actions .md-button {
+  margin: 0;
+}
+
+.hero-version {
+  font-size: 0.64rem;
+  color: var(--md-default-fg-color--light);
+  margin: 0 0 1rem;
+}
+
+/* App screenshots */
+.app-shot {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+  max-width: 100%;
+  margin: 0.6rem 0 1.2rem;
+}
+
+/* ── Dynamic plugin directory ── */
+.plugin-directory-status {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.72rem;
+}
+
+.plugin-directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.7rem;
+  margin: 0.8rem 0 1.4rem;
+}
+
+.plugin-directory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: var(--md-code-bg-color);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.plugin-directory-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 184, 46, 0.4);
+}
+
+.pdc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pdc-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.pdc-icon img {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.pdc-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdc-name {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.pdc-version {
+  font-size: 0.62rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.plugin-directory-card .pdc-desc {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.plugin-directory-card .pdc-changelog {
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(245, 184, 46, 0.07);
+  font-size: 0.62rem;
+  line-height: 1.45;
+  color: var(--md-default-fg-color--light);
+}
+
+.plugin-directory-card .pdc-link {
+  font-size: 0.66rem;
+  font-weight: 600;
+  margin-top: auto;
+}
+
+/* Grid card hover lift */
+.grid.cards > ul > li {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.grid.cards > ul > li:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+/* Heading letter-spacing */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Table headers */
+.md-typeset table:not([class]) th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-default-fg-color--light);
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+/* Rounded images with border */
+.md-content img:not(.hero-image) {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+}
