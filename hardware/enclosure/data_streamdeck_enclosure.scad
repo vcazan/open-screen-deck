@@ -1,5 +1,5 @@
 // ============================================================
-//  Open Screen Deck — Enclosure v12  "one-screw corner stack"
+//  Open Screen Deck — Enclosure v13  "one-screw corner stack"
 //
 //  ASSEMBLY-FIRST architecture — modules keep their FACTORY brass
 //  standoffs; the 4 CASE screws run straight through the corner
@@ -8,7 +8,7 @@
 //    1. Screw 6 modules to the carrier: M2×5 from the carrier
 //       underside into the factory standoff tips (non-corner spots).
 //       At the 4 deck corners swap the factory standoff for the
-//       printed 9.7 mm spacer sleeve (open bore for the case screw).
+//       printed 8.0 mm spacer sleeve (open bore for the case screw).
 //    2. Plug the 6 in-box cables (module → carrier PicoBlade).
 //    3. Drop the carrier onto the tray posts, snap the top shell on.
 //    4. 4× M2×25 from below: tray → carrier → spacer → module
@@ -17,7 +17,7 @@
 //
 //  Stack (bottom→top):
 //    floor 3.0 (head recess 2.1) → PCB lift 3.0 → carrier 1.6
-//    → standoff/spacer 9.7 (clears mated PicoBlade) → module 5.7
+//    → standoff/spacer 8.0 (clears mated PicoBlade) → module 7.4
 //    → module front @ 23.0 → gap 0.2 → face plate 5.0 (M2 inserts)
 //  Deck body ≈ 58.9 × 115.9 × 28.2 mm; caps 3.4 mm proud.
 //  M2×25 check: head seats z0.9–2.9, tip z27.9; insert spans
@@ -33,19 +33,20 @@ NO_STANDALONE = true;
 use <screenkey_module.scad>
 
 // ── Module (SKU 34168, standoffs removed, dual-PCB body) ────
-MOD_W      = 25.94;
-MOD_H      = 35.29;
-MOD_BODY   = 5.7;       // front PCB + nut gap + rear PCB
+MOD_W      = 26.01;
+MOD_H      = 35.31;
+MOD_BODY   = 7.4;       // front PCB + nut gap + rear PCB (vendor: 16 − 8.6)
 CAP_PROUD  = 8.60;      // cap top above module front face
-CAP_W      = 19.4;
+CAP_WX     = 21.89;     // vendor drawing — cap is RECTANGULAR
+CAP_WY     = 25.13;
 CAP_R      = 3.0;
-CAP_CLEAR  = 0.5;
-MOUNT_DX   = 22.0;      // module M2 pattern
-MOUNT_DY   = 25.3;
+CAP_CLEAR  = 0.6;       // total, per axis (0.3 per side)
+MOUNT_DX   = 20.0;      // module M2 pattern (official vendor drawing)
+MOUNT_DY   = 29.25;
 CONN_DROP  = 4.4;       // 9P receptacle below REAR PCB
-STANDOFF_L = 9.7;       // factory brass standoffs (kept installed)
+STANDOFF_L = 8.0;       // factory brass standoffs (kept installed)
 
-// ── Grid (matches PCB Rev B — do not change) ────────────────
+// ── Grid (matches PCB Rev D — do not change) ────────────────
 COLS = 2;  ROWS = 3;  GAP = 3.0;
 
 // ── Body ────────────────────────────────────────────────────
@@ -110,14 +111,16 @@ CSK_OD   = 4.8;                  // countersink mouth (DIN 965 head Ø3.8 + reli
 CSK_H    = 1.3;                  // 90° cone depth above the recess floor
 POST_OD  = 7.0;                  // PCB perch posts under the corners
 INSERT_D = 3.2;  INSERT_L = 4.2; // Ruthex RX-M2x4
-SPACER_OD = 4.0; SPACER_BORE = 2.4;  // printed corner sleeve, 9.7 long
+SPACER_OD = 4.0; SPACER_BORE = 2.4;  // printed corner sleeve, 8.0 long
 FOOT_OFF  = 1.8;                 // foot centre offset (diagonal, inboard) from screw axis
 // (kicad x mirrors into the enclosure: x_e = PCB_OX + PCB_W − x_kicad)
+// Rev D corner screws: module centres ± (10.0, 14.625) — kicad H1–H4 at
+// (3.0, 2.975) / (51.9, 2.975) / (3.0, 108.825) / (51.9, 108.825)
 CORNER_POS = [
-    [PCB_OX + 53.0,  PCB_OY + 4.95],
-    [PCB_OX + 2.1,   PCB_OY + 4.95],
-    [PCB_OX + 53.0,  PCB_OY + 106.85],
-    [PCB_OX + 2.1,   PCB_OY + 106.85]
+    [PCB_OX + 52.0,  PCB_OY + 2.975],
+    [PCB_OX + 3.1,   PCB_OY + 2.975],
+    [PCB_OX + 52.0,  PCB_OY + 108.825],
+    [PCB_OX + 3.1,   PCB_OY + 108.825]
 ];
 
 // ── Stand ───────────────────────────────────────────────────
@@ -134,7 +137,7 @@ $fn = 64;
 // Module centres follow the PCB connector grid (KiCad truth:
 // J1@13,17.6 … pitch 28.9 × 38.3), NOT a symmetric wall inset —
 // keeps apertures + corner screws aligned with the real modules.
-function cx(c) = PCB_OX + 13.0 + c * 28.9;
+function cx(c) = PCB_OX + 13.1 + c * 28.9;   // mirrored kicad truth (55 − 41.9)
 function cy(r) = PCB_OY + 17.6 + r * 38.3;
 function mounts() = [[MOUNT_DX/2, MOUNT_DY/2], [-MOUNT_DX/2, MOUNT_DY/2],
                      [MOUNT_DX/2, -MOUNT_DY/2], [-MOUNT_DX/2, -MOUNT_DY/2]];
@@ -284,10 +287,10 @@ module top_shell() {
         for (c = [0:COLS-1], r = [0:ROWS-1])
             translate([cx(c), cy(r), TOTAL_H - PLATE_T - 0.1]) {
                 linear_extrude(PLATE_T + 0.2)
-                    rsq2d(CAP_W + CAP_CLEAR, CAP_W + CAP_CLEAR, CAP_R);
+                    rsq2d(CAP_WX + CAP_CLEAR, CAP_WY + CAP_CLEAR, CAP_R);
                 translate([0, 0, PLATE_T - 0.7])
                     linear_extrude(0.81, scale = 1.09)
-                        rsq2d(CAP_W + CAP_CLEAR, CAP_W + CAP_CLEAR, CAP_R);
+                        rsq2d(CAP_WX + CAP_CLEAR, CAP_WY + CAP_CLEAR, CAP_R);
             }
 
         // RX-M2x4 insert holes, drilled up into the plate underside,
@@ -374,7 +377,7 @@ if (RENDER == "bottom") {
     modules_ghost();
 }
 
-echo("=== Open Screen Deck enclosure v12 (one-screw corner stack) ===");
+echo("=== Open Screen Deck enclosure v13 (one-screw corner stack) ===");
 echo(str("Deck ", INNER_W, " x ", INNER_D, " x ", TOTAL_H, " mm | caps to ", CAP_TOP));
 echo(str("Carrier top z=", PCB_Z + PCB_TH, " | rear PCB z=", REAR_Z, " | module front z=", MODF_Z));
 echo("Assembly: modules->carrier (M2x5), cables, tray, snap top, 4x M2x25 corner screws through module nuts");

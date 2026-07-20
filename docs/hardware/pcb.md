@@ -114,10 +114,10 @@ cable (Molex 15134 series, or AliExpress "MX1.25 9P" assemblies).
 
 All Ø2.2 (M2 free fit):
 
-- **H1–H4 corner case screws** @ **(2, 4.95), (52.9, 4.95), (2, 106.85), (52.9, 106.85)** —
+- **H1–H4 corner case screws** @ **(3.0, 2.975), (51.9, 2.975), (3.0, 108.825), (51.9, 108.825)** —
   on the corner modules' outermost soldered-nut axes; the M2×25 case screws
   pass through into the module nuts (see [Mechanical](mechanical.md))
-- **H5–H16 module standoffs** @ the 12 usable positions of the 22.0 × 25.3
+- **H5–H16 module standoffs** @ the 12 usable positions of the 20.0 × 29.25
   per-module pattern (8 skipped over ESP32 / USB-C / microSD)
 
 ---

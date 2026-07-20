@@ -9,10 +9,10 @@ Complete shopping list for building one Open Screen Deck. Source CSV:
 |------|-----|------------|--------------|-----------------|-------|
 | ScreenKey module | 6 | Waveshare 0.85inch ScreenKey Module B (SKU 34168) | [waveshare.com](https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168) | ~$66 ($11 ea) | Includes the cable and brass standoffs. Buy Module B (black cap + switch + PCB) |
 | Carrier PCB | 1 | 55 × 112 mm 2-layer; files in `hardware/pcb/gerbers` | [JLCPCB](https://jlcpcb.com) / PCBWay | ~$15 for 5 boards | Upload `data_streamdeck_gerbers.zip`. Assembly service optional; parts list in `hardware/pcb/bom.csv` |
-| Printed: bottom tray | 1 | `hardware/enclosure/stl/deck_bottom_v12.stl` | Your 3D printer | ~$1 filament | PETG or PLA+; flat on bed; no supports |
-| Printed: top shell | 1 | `hardware/enclosure/stl/deck_top_v12.stl` | Your 3D printer | ~$1 filament | Face-down; no supports |
-| Printed: corner spacers | 4 | `hardware/enclosure/stl/corner_spacers_x4_v12.stl` | Your 3D printer | pennies | 100% infill; replaces the factory standoff at the 4 deck corners |
-| Printed: desk stand | 1 | `hardware/enclosure/stl/deck_stand_v12.stl` | Your 3D printer | ~$1 filament | Optional 25° stand |
+| Printed: bottom tray | 1 | `hardware/enclosure/stl/deck_bottom_v13.stl` | Your 3D printer | ~$1 filament | PETG or PLA+; flat on bed; no supports |
+| Printed: top shell | 1 | `hardware/enclosure/stl/deck_top_v13.stl` | Your 3D printer | ~$1 filament | Face-down; no supports |
+| Printed: corner spacers | 4 | `hardware/enclosure/stl/corner_spacers_x4_v13.stl` | Your 3D printer | pennies | 100% infill; replaces the factory standoff at the 4 deck corners |
+| Printed: desk stand | 1 | `hardware/enclosure/stl/deck_stand_v13.stl` | Your 3D printer | ~$1 filament | Optional 25° stand |
 | Heat-set insert M2 | 4 | Ruthex RX-M2x4 brass (3.2 mm install hole) | Amazon "ruthex M2" | ~$8 per 50-pack | Goes into the top shell face plate |
 | Screw M2×25 countersunk | 4 | M2 × 25 mm flat head countersunk DIN 965 (Phillips) or ISO 14581 (Torx) A2 | Amazon / AliExpress "M2×25 DIN 965" | ~$6 assorted box | The 4 case screws. Heads sink into the foot recesses and are hidden by the rubber feet |
 | Screw M2×5 | 12 | M2 × 5 mm hex socket cap ISO 4762 / DIN 912 A2 | Same assorted box as above | included | Fixes modules to the carrier from below |

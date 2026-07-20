@@ -12,10 +12,10 @@ first — see [3D Printing](../getting-started/printing.md) for settings.
 
 | Part | File | Print notes |
 |------|------|-------------|
-| Bottom tray | `deck_bottom_v12.stl` | Flat on bed, no supports |
-| Top shell | `deck_top_v12.stl` | Face-down, no supports |
-| Corner spacers ×4 | `corner_spacers_x4_v12.stl` | 100% infill recommended |
-| Desk stand (optional) | `deck_stand_v12.stl` | Upright, 15–20% infill |
+| Bottom tray | `deck_bottom_v13.stl` | Flat on bed, no supports |
+| Top shell | `deck_top_v13.stl` | Face-down, no supports |
+| Corner spacers ×4 | `corner_spacers_x4_v13.stl` | 100% infill recommended |
+| Desk stand (optional) | `deck_stand_v13.stl` | Upright, 15–20% infill |
 
 PETG or PLA+, 0.2 mm layers, 3 walls.
 
@@ -73,7 +73,7 @@ corner screws go in at the end.
 Connect each module to its carrier connector (J1–J6) with the **200 mm
 MX1.25 cable included in every module box**. Both ends are identical —
 plug one into the module's 9-pin connector, one into the carrier, and fold
-the slack flat under the module. The 9.7 mm standoff height is exactly the
+the slack flat under the module. The 8.0 mm standoff height is exactly the
 room the folded cable needs.
 
 ![Cables connect each module to the carrier](../images/step4_cables.png)

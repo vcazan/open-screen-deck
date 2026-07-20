@@ -1,13 +1,14 @@
 // ============================================================
-//  Waveshare 0.85" ScreenKey Module B (SKU 34168) — replica v2
+//  Waveshare 0.85" ScreenKey Module B (SKU 34168) — replica v3
 //
-//  Construction per dimension drawing + product photos:
-//    keycap (8.60 proud) on switch
-//    FRONT PCB 25.94 × 35.29 × 1.6  (switch + LCD FPC side)
-//    4× SOLDERED THREADED NUTS (M2) between the boards @ 22.0 × 25.3
-//    REAR PCB 25.94 × 35.29 × 1.6   (9P connector underneath)
-//    4× removable brass standoffs threaded into the nuts from rear
-//    Total with standoffs: 24.0 (cap top → standoff tip)
+//  Construction per the OFFICIAL vendor drawing (2026-07-10,
+//  docs/reference/screenkey-module/vendor-dimensions.pdf):
+//    keycap 21.89 × 25.13, 8.60 proud
+//    FRONT PCB 26.01 × 35.31 × 1.6  (switch + LCD FPC side)
+//    4× SOLDERED THREADED NUTS (M2) between the boards @ 20.0 × 29.25
+//    REAR PCB 26.01 × 35.31 × 1.6   (9P connector underneath)
+//    4× removable 8 mm brass standoffs threaded into the nuts
+//    cap front → rear PCB back: 16.0; with standoffs: 24.0
 //
 //  Mounting WITHOUT standoffs: M2 screws from behind, through the
 //  rear-PCB corner holes, into the internal soldered nuts.
@@ -15,10 +16,10 @@
 //  Origin: centre of FRONT PCB front face. Cap +Z, boards −Z.
 // ============================================================
 
-MOD_W       = 25.94;
-MOD_H       = 35.29;
+MOD_W       = 26.01;
+MOD_H       = 35.31;
 PCB_T       = 1.60;
-NUT_GAP     = 2.50;    // soldered nut spacer between the two boards
+NUT_GAP     = 4.20;    // soldered nut spacer between the two boards (16 − 8.6 − 2×1.6)
 CAP_PROUD   = 8.60;    // cap top above front PCB front face
 MOD_TOTAL   = 24.00;   // with factory standoffs installed
 // depth behind front face without standoffs:
@@ -27,10 +28,11 @@ STANDOFF_L  = MOD_TOTAL - CAP_PROUD - BODY_DEPTH;   // 9.7 (removable)
 STANDOFF_D  = 3.4;
 NUT_OD      = 4.0;     // soldered M2 nut/spacer
 NUT_ID      = 1.6;     // M2 thread
-MOUNT_DX    = 22.00;
-MOUNT_DY    = 25.30;
+MOUNT_DX    = 20.00;
+MOUNT_DY    = 29.25;
 
-CAP_W       = 19.40;
+CAP_WX      = 21.89;
+CAP_WY      = 25.13;
 CAP_R       = 3.0;
 CAP_H       = 6.2;
 GLASS_W     = 15.21;
@@ -71,13 +73,13 @@ module screenkey_cap() {
     color("#141416")
         translate([0, 0, SW_BODY_H])
             linear_extrude(CAP_H - 1.2)
-                _rsq(CAP_W, CAP_W, CAP_R);
+                _rsq(CAP_WX, CAP_WY, CAP_R);
     color("#0d0d10")
         translate([0, 0, SW_BODY_H + CAP_H - 1.2])
             hull() {
-                linear_extrude(0.01) _rsq(CAP_W, CAP_W, CAP_R);
+                linear_extrude(0.01) _rsq(CAP_WX, CAP_WY, CAP_R);
                 translate([0, 0, 1.2])
-                    linear_extrude(0.01) _rsq(CAP_W - 1.6, CAP_W - 1.6, CAP_R - 0.6);
+                    linear_extrude(0.01) _rsq(CAP_WX - 1.6, CAP_WY - 1.6, CAP_R - 0.6);
             }
     color("#1a2b3c")
         translate([0, 0, SW_BODY_H + CAP_H + 0.011])

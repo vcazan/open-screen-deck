@@ -5,13 +5,13 @@
       "Application": "Pcbnew",
       "Version": "10.0.4"
     },
-    "CreationDate": "2026-07-13T23:03:06-04:00"
+    "CreationDate": "2026-07-20T06:28:23-04:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "data_streamdeck",
       "GUID": "64617461-5f73-4747-9265-616d6465636b",
-      "Revision": "C"
+      "Revision": "D"
     },
     "Size": {
       "X": 55.1,

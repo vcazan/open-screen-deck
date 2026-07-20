@@ -1,22 +1,22 @@
-# Mechanical Contract — Enclosure ↔ PCB (v12 / Tier B)
+# Mechanical Contract — Enclosure ↔ PCB (v13 / Tier B)
 
 Single source of truth for physical interfaces.  
 **Module reference:** [ScreenKey Module](screenkey-module.md) (Waveshare SKU **34168**)
 
 ---
 
-## Outer envelope (v12 — flat deck + separate stand)
+## Outer envelope (v13 — flat deck + separate stand)
 
 The deck body is a flat slab; a separate printed stand provides the desk angle.
 
 | Parameter | Value |
 |-----------|-------|
-| Deck width (X) | **59.7 mm** |
+| Deck width (X) | **59.8 mm** |
 | Deck depth (Y) | **116.7 mm** |
 | Deck height | **28.2 mm** (+3.4 mm keycap protrusion) |
 | Parting plane | **Z = 12 mm** (bottom tray / top shell) |
 | Stand angle | **25°** (separate print, cradle style) |
-| Stack | floor 3.0 → posts 3.0 → PCB 1.6 → standoff/spacer 9.7 → module body 5.7 → gap 0.2 → face plate 5.0 |
+| Stack | floor 3.0 → posts 3.0 → PCB 1.6 → standoff/spacer 8.0 → module body 7.4 → gap 0.2 → face plate 5.0 |
 
 ---
 
@@ -86,10 +86,10 @@ One USB-C cable plugs directly into the deck — power, HID, and config.
 
 ---
 
-## Fasteners (v12 — one-screw corner stack)
+## Fasteners (v13 — one-screw corner stack)
 
 The ScreenKey module is a **dual-PCB sandwich**: front PCB (switch/LCD) and
-rear PCB (9P connector) joined by **soldered M2 nuts** at the 22.0 × 25.3
+rear PCB (9P connector) joined by **soldered M2 nuts** at the 20.0 × 29.25
 pattern. The factory brass standoffs **unscrew from those nuts** — the nuts
 are the mounting threads, and they are **through-threads**: a long screw can
 pass through and keep going. The module is off-the-shelf and is never
@@ -103,7 +103,7 @@ M2×25 countersunk head (DIN 965, flush in the rubber-foot recess)
   → tray floor (3.0)
   → PCB perch post (3.0)
   → carrier corner hole H1–H4 (Ø2.2 @ kicad 2/52.9, 4.95/106.85)
-  → printed spacer sleeve Ø4×9.7 (replaces the factory standoff,
+  → printed spacer sleeve Ø4×8.0 (replaces the factory standoff,
     open Ø2.4 bore)
   → corner module's soldered M2 nut (threads through)
   → RX-M2x4 insert in the top-shell face plate (4 mm engagement)
@@ -129,10 +129,10 @@ One screw per corner marries **bottom tray + carrier + module + top shell**.
 |-------|----------|----------|
 | Whole stack (tray + carrier + module + top) | 4× **M2×25 countersunk flat head** (DIN 965) from below, hidden under the rubber feet | Corner module's **soldered M2 nut** (pass-through), then **Ruthex RX-M2x4** insert in the top-shell plate |
 | Module → carrier | 12× **M2×5 hex socket cap** (ISO 4762) from carrier underside | Module's **factory brass standoffs** (female M2 tips) |
-| Corner spacing | 4× **printed spacer sleeve** Ø4 × 9.7, Ø2.4 bore (`stl/corner_spacers_x4_v12.stl`) | sits between carrier and corner-module nut |
+| Corner spacing | 4× **printed spacer sleeve** Ø4 × 8.0, Ø2.4 bore (`stl/corner_spacers_x4_v13.stl`) | sits between carrier and corner-module nut |
 | Feet | 8× Ø10 self-adhesive rubber (deck + stand); the 4 deck feet cover the corner screw heads | — |
 
-The factory standoffs (and corner sleeves) are 9.7 mm — exactly clearing the
+The factory standoffs (and corner sleeves) are 8.0 mm — exactly clearing the
 mated PicoBlade cable under each module. Standoffs at the 8 skipped positions
 (over ESP32 / USB-C / microSD) are simply unscrewed.
 
@@ -165,6 +165,6 @@ Bottom   → Carrier PCB (ESP32 + USB-C + SD + J1–J6)
   (open corner holes on the front face); M2×25 passes through and exits
   toward the top-plate insert
 - [ ] Real 34168 module fits top bays
-- [ ] **Keycap aperture:** `CAP_W = 19.4` in the SCAD is an estimate — measure a
+- [x] **Keycap aperture:** verified against the official vendor drawing — cap is 21.89 × 25.13 mm (rectangular), apertures cut at +0.6 mm clearance
   real cap and adjust before final print
 - [ ] Deck seats in stand cradle; USB cable clears stand rear
