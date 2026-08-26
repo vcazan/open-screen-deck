@@ -32,7 +32,7 @@ ship, send the Gerbers to a board house and print the case. Assembly is
 four corner screws and the in-box cables. Then flash over USB-C.
 
 1. **[Order parts](getting-started/parts.md)** — six Waveshare 34168
-   modules (~$66), a Rev E PCB from JLCPCB, M2 screws, inserts, feet.
+   modules (about $66), a Rev E PCB from JLCPCB, M2 screws, inserts, feet.
    Whole bill is about $100.
 2. **[Print the case](getting-started/printing.md)** — four STLs, PETG or
    PLA+, no supports. Do this while the PCB is in transit.

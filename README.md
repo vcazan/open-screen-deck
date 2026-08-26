@@ -15,9 +15,9 @@ companion.
 ## Build one
 
 1. **Order** — 6× [Waveshare 34168](https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168)
-   (~$66, longest lead time). Upload
+   (about $66, longest lead time). Upload
    [`hardware/pcb/data_streamdeck_gerbers.zip`](hardware/pcb/data_streamdeck_gerbers.zip)
-   to [JLCPCB](https://jlcpcb.com) (~$15 for five boards). Full list:
+   to [JLCPCB](https://jlcpcb.com) (about $15 for five boards). Full list:
    [`hardware/bom_assembly.csv`](hardware/bom_assembly.csv)
 2. **Print** while those ship — four STLs in [`hardware/enclosure/stl/`](hardware/enclosure/stl/),
    PETG or PLA+, no supports:
