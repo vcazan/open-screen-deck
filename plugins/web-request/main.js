@@ -105,6 +105,7 @@ export function activate(api) {
       }
 
       let text, color;
+      let ok = false;
       try {
         const res = await ctx.fetch(settings.url, {
           method,
@@ -112,7 +113,8 @@ export function activate(api) {
           body: method === 'GET' || method === 'HEAD' ? undefined : settings.body || undefined,
         });
         text = `HTTP ${res.status}`;
-        color = res.ok ? '#2fd47c' : '#e05252';
+        ok = res.ok;
+        color = ok ? '#2fd47c' : '#e05252';
         ctx.log(`${method} ${settings.url} → HTTP ${res.status}`);
       } catch (err) {
         text = 'FAILED';
@@ -121,6 +123,7 @@ export function activate(api) {
       }
 
       await ctx.paintFace(drawStatus(settings.name, text, color));
+      ctx.beep(ok ? 1760 : 280, ok ? 60 : 140);
       reverts.set(
         ctx.slot,
         setTimeout(() => {

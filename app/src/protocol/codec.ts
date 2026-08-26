@@ -46,6 +46,24 @@ export function encodeCommand(cmd: HostCommand): string {
       return `SET_PAGE ${cmd.page}`;
     case 'SET_PAGES':
       return `SET_PAGES ${cmd.pages}`;
+    case 'SET_LED':
+      return `SET_LED ${JSON.stringify({ index: cmd.index, r: cmd.r, g: cmd.g, b: cmd.b })}`;
+    case 'LED_CLEAR':
+      return 'LED_CLEAR';
+    case 'SET_BRIGHT':
+      return `SET_BRIGHT ${cmd.level}`;
+    case 'AUTODIM':
+      return `AUTODIM ${cmd.on ? 1 : 0}`;
+    case 'HAPTIC':
+      return 'HAPTIC';
+    case 'BEEP':
+      return cmd.freq !== undefined ? `BEEP ${cmd.freq} ${cmd.ms ?? 80}` : 'BEEP';
+    case 'CLICK_BEEP':
+      return `CLICK_BEEP ${cmd.on ? 1 : 0}`;
+    case 'SELFTEST':
+      return 'SELFTEST';
+    case 'FLASHING':
+      return 'FLASHING';
   }
 }
 
@@ -57,6 +75,37 @@ export function parseCommandLine(line: string): HostCommand | null {
   if (trimmed === 'GET_KEYS') return { type: 'GET_KEYS' };
   if (trimmed === 'DRAW_ALL') return { type: 'DRAW_ALL' };
   if (trimmed === 'SD_INFO') return { type: 'SD_INFO' };
+  if (trimmed === 'LED_CLEAR') return { type: 'LED_CLEAR' };
+  if (trimmed === 'HAPTIC') return { type: 'HAPTIC' };
+  if (trimmed === 'SELFTEST') return { type: 'SELFTEST' };
+  if (trimmed === 'FLASHING') return { type: 'FLASHING' };
+  if (trimmed.startsWith('SET_LED ')) {
+    try {
+      const p = JSON.parse(trimmed.slice(8)) as { index: number; r: number; g: number; b: number };
+      return { type: 'SET_LED', index: p.index, r: p.r, g: p.g, b: p.b };
+    } catch {
+      return null;
+    }
+  }
+  if (trimmed.startsWith('SET_BRIGHT ')) {
+    const level = parseInt(trimmed.slice(11), 10);
+    if (!isNaN(level)) return { type: 'SET_BRIGHT', level };
+    return null;
+  }
+  if (trimmed.startsWith('AUTODIM ')) {
+    return { type: 'AUTODIM', on: trimmed.slice(8).trim() !== '0' };
+  }
+  if (trimmed.startsWith('BEEP')) {
+    const parts = trimmed.split(/\s+/);
+    if (parts.length === 1) return { type: 'BEEP' };
+    const freq = parseInt(parts[1], 10);
+    const ms = parts.length > 2 ? parseInt(parts[2], 10) : 80;
+    if (!isNaN(freq)) return { type: 'BEEP', freq, ms: isNaN(ms) ? 80 : ms };
+    return null;
+  }
+  if (trimmed.startsWith('CLICK_BEEP ')) {
+    return { type: 'CLICK_BEEP', on: trimmed.slice(11).trim() !== '0' };
+  }
   if (trimmed.startsWith('SD_LS')) {
     return { type: 'SD_LS', path: trimmed.slice(5).trim() || '/' };
   }

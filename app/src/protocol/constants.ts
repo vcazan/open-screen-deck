@@ -9,8 +9,17 @@ export const FRAME_WIDTH = 128;
 export const FRAME_HEIGHT = 128;
 export const FRAME_BYTES = FRAME_WIDTH * FRAME_HEIGHT * 2; // 32768 RGB565
 
-export const FIRMWARE_VERSION = '0.12.0';
+export const FIRMWARE_VERSION = '0.14.3';
+export const PROTOCOL_VERSION = 14;
 export const DEVICE_NAME = 'Open Screen Deck';
+
+/**
+ * SK6812 status/glow LEDs (Rev E hardware): logical 0-5 = per-key
+ * (J1..J6), 6 = rear-left (companion link), 7 = rear-right (SD activity).
+ */
+export const LED_COUNT = 8;
+export const LED_REAR_LINK = 6;
+export const LED_REAR_SD = 7;
 
 /**
  * Reserved HID codes — a key configured with one of these switches pages

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { dbgTrace } from '../utils/debugTrace';
 import type { SimulatedDevice } from '../simulator/SimulatedDevice';
 import { hidCodeToLabel } from '../protocol/constants';
 
@@ -90,6 +91,16 @@ export function DeviceView({
   const [pressedKey, setPressedKey] = useState<number | null>(null);
   const [chips, setChips] = useState<KeyChip[]>([]);
   const chipIdRef = useRef(0);
+  const [gridFlipping, setGridFlipping] = useState(false);
+  const pageSeenRef = useRef(page);
+
+  useEffect(() => {
+    if (pageSeenRef.current === page) return;
+    pageSeenRef.current = page;
+    setGridFlipping(true);
+    const t = window.setTimeout(() => setGridFlipping(false), 90);
+    return () => window.clearTimeout(t);
+  }, [page]);
 
   // Fit-to-stage scaling: the deck never clips — it shrinks (and slides
   // left when the inspector overlays the stage on narrow windows).
@@ -128,8 +139,15 @@ export function DeviceView({
     };
   }, [landscape, inspectorOpen]);
 
+  const blitCountRef = useRef(0);
   useEffect(() => {
     if (!device) return;
+    blitCountRef.current += 1;
+    if (blitCountRef.current <= 5 || blitCountRef.current % 50 === 0) {
+      dbgTrace(
+        `sync: blit #${blitCountRef.current} tick=${refreshTick} canvases=${canvasRefs.current.filter(Boolean).length}`,
+      );
+    }
     for (let i = 0; i < 6; i++) {
       const srcCanvas = device.getCanvas(i);
       const dstCanvas = canvasRefs.current[i];
@@ -290,7 +308,7 @@ export function DeviceView({
         <div className="deck-shadow" aria-hidden />
         <div className={`deck ${landscape ? 'landscape' : ''}`}>
           <div className="deck-bezel">
-            <div className={`deck-grid ${landscape ? 'landscape' : ''}`}>
+            <div className={`deck-grid ${landscape ? 'landscape' : ''} ${gridFlipping ? 'is-flipping' : ''}`}>
               {gridOrder.map((index) => (
                 <div
                   key={index}

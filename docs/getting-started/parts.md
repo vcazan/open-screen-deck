@@ -8,11 +8,12 @@ Complete shopping list for building one Open Screen Deck. Source CSV:
 | Item | Qty | Exact spec | Where to buy | Est. cost (USD) | Notes |
 |------|-----|------------|--------------|-----------------|-------|
 | ScreenKey module | 6 | Waveshare 0.85inch ScreenKey Module B (SKU 34168) | [waveshare.com](https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168) | ~$66 ($11 ea) | Includes the cable and brass standoffs. Buy Module B (black cap + switch + PCB) |
-| Carrier PCB | 1 | 55 × 112 mm 2-layer; files in `hardware/pcb/gerbers` | [JLCPCB](https://jlcpcb.com) / PCBWay | ~$15 for 5 boards | Upload `data_streamdeck_gerbers.zip`. Assembly service optional; parts list in `hardware/pcb/bom.csv` |
-| Printed: bottom tray | 1 | `hardware/enclosure/stl/deck_bottom_v13.stl` | Your 3D printer | ~$1 filament | PETG or PLA+; flat on bed; no supports |
-| Printed: top shell | 1 | `hardware/enclosure/stl/deck_top_v13.stl` | Your 3D printer | ~$1 filament | Face-down; no supports |
-| Printed: corner spacers | 4 | `hardware/enclosure/stl/corner_spacers_x4_v13.stl` | Your 3D printer | pennies | 100% infill; replaces the factory standoff at the 4 deck corners |
-| Printed: desk stand | 1 | `hardware/enclosure/stl/deck_stand_v13.stl` | Your 3D printer | ~$1 filament | Optional 25° stand |
+| Carrier PCB | 1 | **59.5 × 108.5 mm** Rev E 2-layer; files in `hardware/pcb/gerbers` | [JLCPCB](https://jlcpcb.com) / PCBWay | ~$15 for 5 boards | Upload `data_streamdeck_gerbers.zip`. SMT assembly recommended (IMU, ALS, LEDs). Parts in `hardware/pcb/bom.csv` |
+| Printed: bottom tray | 1 | `hardware/enclosure/stl/deck_bottom_v14.stl` | Your 3D printer | ~$1 filament | PETG or PLA+; flat on bed; no supports. LED wall windows + SD + USB + Qwiic |
+| Printed: top shell | 1 | `hardware/enclosure/stl/deck_top_v14.stl` | Your 3D printer | ~$1 filament | Face-down; no supports. ALS light-pipe hole in the face plate |
+| Printed: corner spacers | 4 | `hardware/enclosure/stl/corner_spacers_x4_v14.stl` | Your 3D printer | pennies | 100% infill; replaces the factory standoff at the 4 deck corners |
+| Printed: desk stand | 1 | `hardware/enclosure/stl/deck_stand_v14.stl` | Your 3D printer | ~$1 filament | Optional 25° stand |
+| LRA coin motor | 1 | 8 mm LRA (e.g. Vybronics VG0832013D) | Digi-Key / LCSC | ~$2 | Optional — plugs into J10 for haptic click. Piezo on the PCB still beeps without it |
 | Heat-set insert M2 | 4 | Ruthex RX-M2x4 brass (3.2 mm install hole) | Amazon "ruthex M2" | ~$8 per 50-pack | Goes into the top shell face plate |
 | Screw M2×25 countersunk | 4 | M2 × 25 mm flat head countersunk DIN 965 (Phillips) or ISO 14581 (Torx) A2 | Amazon / AliExpress "M2×25 DIN 965" | ~$6 assorted box | The 4 case screws. Heads sink into the foot recesses and are hidden by the rubber feet |
 | Screw M2×5 | 12 | M2 × 5 mm hex socket cap ISO 4762 / DIN 912 A2 | Same assorted box as above | included | Fixes modules to the carrier from below |
@@ -22,19 +23,23 @@ Complete shopping list for building one Open Screen Deck. Source CSV:
 
 !!! info "Estimated total"
     About **$100 in parts** — $66 of which is the six key modules. PCB fab runs
-    ~$15 for five boards; fasteners and printed parts add the rest. You likely
-    already own a USB-C cable.
+    ~$15 for five boards; Rev E sensors and glow add about $4–6 on the SMT
+    line. Fasteners and printed parts add the rest. You likely already own a
+    USB-C cable.
 
 ## What to order first
 
 - [ ] **6× Waveshare 34168** — longest lead time; order these first from
       [Waveshare](https://www.waveshare.com/0.85inch-screenkey.htm?sku=34168)
 - [ ] **Carrier PCB** — upload `hardware/pcb/data_streamdeck_gerbers.zip` to
-      [JLCPCB](https://jlcpcb.com) (~$15 for five boards)
+      [JLCPCB](https://jlcpcb.com) (~$15 for five boards). Prefer SMT
+      assembly on Rev E (IMU, ALS, eight SK6812s, haptic driver)
 - [ ] **M2 fasteners** — one assorted box covers M2×5 module screws and M2×25
       case screws
 - [ ] **4× Ruthex RX-M2x4** heat-set inserts for the top shell
 - [ ] **8× rubber feet** (10 mm dia × 2 mm)
 - [ ] **Print the four STLs** while waiting on PCB and modules — see
-      [3D Printing](printing.md)
+      [3D Printing](printing.md) (`*_v14.stl`, sized for the Rev E carrier)
 - [ ] **microSD card** (optional) — 8–32 GB FAT32 for on-device icons
+- [ ] **LRA coin motor** (optional) — plugs into J10; the on-board piezo
+      still beeps without it

@@ -37,5 +37,17 @@ void defaultSlotConfig(uint8_t slot);
 /** Load every slot (plus page/orientation prefs) from NVS at boot. */
 void loadConfig();
 
-/** Persist one slot to NVS — called after every SET_KEY. */
+/** Persist one slot to NVS immediately (boot defaults, explicit saves). */
 void saveConfig(uint8_t idx);
+
+/** Mark a slot dirty; NVS flush is deferred so bursts don't block keys. */
+void markConfigDirty(uint8_t idx);
+
+/** Write all dirty slots to NVS — use sparingly; prefer flushOneConfigDirty(). */
+void flushConfigDirty();
+
+/** Persist at most one dirty slot; returns true if more remain. */
+bool flushOneConfigDirty();
+
+/** True while any slot still needs an NVS write. */
+bool configIsDirty();

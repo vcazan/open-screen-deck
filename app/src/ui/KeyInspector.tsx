@@ -201,6 +201,8 @@ export function KeyInspector({
       bg?: number;
       icon?: string;
       ov?: number;
+      /** Default 1 — companion mode otherwise stores the edit and never paints. */
+      draw?: number;
     }) => {
       const payload = {
         index: keyIndex,
@@ -210,13 +212,14 @@ export function KeyInspector({
         bg: updates.bg ?? bg,
         icon: updates.icon ?? icon,
         ov: updates.ov ?? (overlayOn ? 1 : 0),
+        draw: updates.draw ?? 1,
       };
       onSendCommand(encodeCommand({ type: 'SET_KEY', payload }));
     },
     [keyIndex, label, sublabel, hid, bg, icon, overlayOn, onSendCommand],
   );
 
-  const debouncedSendSetKey = useDebouncedCallback(sendSetKey, 300);
+  const debouncedSendSetKey = useDebouncedCallback(sendSetKey, 50);
 
   /**
    * Typing a label on a key that shows media implies wanting to SEE it —
@@ -313,7 +316,7 @@ export function KeyInspector({
     rawIconRef.current = rgb565;
     saveKeyMediaImage(keyIndex, rgb565, 'upload'); // kept for the inspector thumbnail
     applyStaticIcon(rgb565);
-    sendSetKey({}); // pushes the current overlay flag alongside the new image
+    sendSetKey({ draw: 0 }); // SET_IMAGE paints; skip a label-card flash
     setIconPreview(cropped.toDataURL());
   };
 
@@ -325,7 +328,7 @@ export function KeyInspector({
     rawIconRef.current = rgb565;
     saveKeyMediaImage(keyIndex, rgb565, 'library');
     applyStaticIcon(rgb565);
-    sendSetKey({ icon: name });
+    sendSetKey({ icon: name, draw: 0 });
     setIconPreview(canvas.toDataURL());
   };
 
@@ -356,7 +359,7 @@ export function KeyInspector({
       if (!label || label === appName.toUpperCase() || /^SCENE|MUTE|CLIP|BROWSER|MACRO/.test(label)) {
         const next = appName.slice(0, 12).toUpperCase();
         setLabel(next);
-        sendSetKey({ label: next });
+        sendSetKey({ label: next, draw: 0 });
       }
     };
     img.src = dataUrl;
@@ -384,7 +387,7 @@ export function KeyInspector({
 
     setAnimFrames(result.frames);
     applyAnimation(result.frames, animFps);
-    sendSetKey({}); // ensure the overlay flag rides along with new media
+    sendSetKey({ draw: 0 }); // overlay flag; frames paint as they upload
   };
 
   /** Overlay is a device-side flag now — flipping it is one SET_KEY, no re-upload. */

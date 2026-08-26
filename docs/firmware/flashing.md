@@ -13,7 +13,7 @@ assembly over the on-board USB-C port.
 ## Requirements
 
 - **Arduino IDE** (or `arduino-cli`) with the [ESP32 board package](https://docs.espressif.com/projects/arduino-esp32/en/latest/)
-- Libraries: **Adafruit ST7735 and ST7789**, **Adafruit GFX**
+- Libraries: **Adafruit ST7735 and ST7789**, **Adafruit GFX**, **Adafruit NeoPixel**
 - USB-C data cable
 
 ## Board settings
@@ -25,6 +25,8 @@ In Arduino IDE, select:
 | Board | **ESP32S3 Dev Module** |
 | USB CDC On Boot | **Enabled** |
 | USB Mode | **USB-OTG (TinyUSB)** |
+| PSRAM | **OPI PSRAM** (WROOM-1-N16R8) |
+| Flash Size | **16MB** (partition `app3M_fat9M_16MB`) |
 
 ## Upload
 
@@ -42,7 +44,9 @@ After upload, the deck enumerates as:
 - A **CDC serial port** — for runtime config over the [Serial Protocol](protocol.md)
 
 Key labels, colors, and HID codes are configurable at runtime over the
-serial protocol — no reflash needed.
+serial protocol — no reflash needed. On a Rev E board, `INFO` also reports
+IMU / ALS / haptic presence, lux, and LED count. Settings → Deck hardware
+in the companion drives auto-dim, glow, and a `SELFTEST`.
 
 !!! tip "First test"
     Open a serial monitor at 115200 baud and send `PING`. You should receive

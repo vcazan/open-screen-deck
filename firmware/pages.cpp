@@ -16,8 +16,15 @@ void savePagePref() {
 void switchPage(uint8_t page) {
     if (page >= pageCount) return;
     stopAnimation();
+    if (page == currentPage) {
+        if (Serial) Serial.printf("{\"event\":\"page\",\"page\":%u}\n", currentPage);
+        return;
+    }
     currentPage = page;
-    for (uint8_t p = 0; p < KEY_COUNT; p++) drawKey(slotOfPos(p));
+    // Draw all six under a dark backlight, then fade in together — never
+    // blit keys one-by-one (scheduleDrawAll would leave a 350 ms window
+    // where live SET_FACE updates stagger across the page).
+    drawAllVisible();
     savePagePref();
     if (Serial) Serial.printf("{\"event\":\"page\",\"page\":%u}\n", currentPage);
 }

@@ -116,5 +116,12 @@ scaffold to working plugin in under a minute.
 
 Settings → Firmware shows the version on the deck vs. the version bundled
 with the app. One click reboots the deck into its ROM bootloader, flashes
-over USB (~30 s), and restarts it. No Arduino IDE, no esptool. A recovery
-option un-sticks decks left in bootloader mode.
+over USB (~30 s) with a live progress overlay, and restarts it. No Arduino
+IDE, no esptool. A recovery option un-sticks decks left in bootloader mode.
+
+## Deck hardware (Rev E)
+
+When a connected deck reports protocol 14+, Settings grows a **Deck
+hardware** card: IMU / ALS / haptic presence, lux, auto-dim, backlight,
+glow colour for the eight SK6812s, click-beep, and a `SELFTEST` that walks
+the panels and sensors. Older boards hide the card.

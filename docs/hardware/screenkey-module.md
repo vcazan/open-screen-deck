@@ -115,13 +115,14 @@ Pin order per Waveshare docs (SPI control interface):
 | J5 | GPIO 4 | GPIO 42 |
 | J6 | GPIO 5 | GPIO 47 |
 
-Shared: MOSI=11, SCK=12, DC=14, RST=21, BL(PWM)=13
+Shared: dual SPI — J1–J3 use MOSI=11, SCK=12, DC=14; J4–J6 use MOSI=17, SCK=18, DC=8. Shared RST=21, BL(PWM)=13. microSD sits on bus A (CS=16, MISO=15). Canonical table: [`hardware/pinout.py`](https://github.com/vcazan/open-screen-deck/blob/main/hardware/pinout.py).
 
 ---
 
 ## CAD status
 
-Enclosure v4 + PCB brief aligned to this reference (2026-07-03).
+Rev E PCB + enclosure v14 aligned to the official vendor drawing
+(20.0 × 29.25 standoff pattern; dual SPI on the carrier).
 
 ---
 

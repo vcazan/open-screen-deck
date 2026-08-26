@@ -1,0 +1,37 @@
+#VRML V2.0 utf8
+# Vishay VEML7700 ambient light sensor, 6.8 x 2.35 x 3.0 mm side-view SMD.
+# Hand-authored stand-in body (KiCad WRL units: 1 unit = 2.54 mm).
+# Lens window sits on the local -Y face (points out the front wall at rot 180).
+Transform {
+  translation 0 0 0.5906
+  children [
+    Shape {
+      appearance Appearance {
+        material Material { diffuseColor 0.13 0.13 0.14 shininess 0.3 }
+      }
+      geometry Box { size 2.6772 0.9252 1.1811 }
+    }
+  ]
+}
+Transform {
+  translation 0 -0.468 0.72
+  children [
+    Shape {
+      appearance Appearance {
+        material Material { diffuseColor 0.82 0.78 0.62 shininess 0.8 }
+      }
+      geometry Box { size 0.63 0.02 0.35 }
+    }
+  ]
+}
+Transform {
+  translation -1.0 -0.468 0.3
+  children [
+    Shape {
+      appearance Appearance {
+        material Material { diffuseColor 0.55 0.55 0.55 }
+      }
+      geometry Box { size 0.12 0.02 0.12 }
+    }
+  ]
+}

@@ -1,5 +1,10 @@
 // ============================================================
-//  Open Screen Deck — Enclosure v13  "one-screw corner stack"
+//  Open Screen Deck — Enclosure v14  "Rev E wide-pitch + glow"
+//
+//  v14 (PCB Rev E): key pitch 33.0 x 36.3 (uniform 11 mm cap-to-cap),
+//  carrier 59.5 x 108.5 mm, 8x SK6812 edge-glow windows (3 left,
+//  3 right, 2 rear), VEML7700 light-pipe hole in the face plate,
+//  Qwiic (JST-SH) opening in the rear wall next to USB.
 //
 //  ASSEMBLY-FIRST architecture — modules keep their FACTORY brass
 //  standoffs; the 4 CASE screws run straight through the corner
@@ -46,15 +51,17 @@ MOUNT_DY   = 29.25;
 CONN_DROP  = 4.4;       // 9P receptacle below REAR PCB
 STANDOFF_L = 8.0;       // factory brass standoffs (kept installed)
 
-// ── Grid (matches PCB Rev D — do not change) ────────────────
-COLS = 2;  ROWS = 3;  GAP = 3.0;
+// ── Grid (matches PCB Rev E, hardware/pinout.py — do not change) ──
+COLS = 2;  ROWS = 3;
+COL_PITCH = 33.0;   // uniform 11 mm cap-to-cap gap
+ROW_PITCH = 36.3;
 
 // ── Body ────────────────────────────────────────────────────
 WALL     = 2.4;     // thick enough for the split-line tongue joint
 FLOOR    = 3.0;     // thick enough to swallow the M2 cap heads
 PLATE_T  = 5.0;     // thick face plate: houses the corner M2 inserts
 PCB_LIFT = 3.0;     // room for M2 screw heads under carrier
-PCB_W = 55.0;  PCB_D = 112.0;  PCB_TH = 1.6;
+PCB_W = 59.5;  PCB_D = 108.5;  PCB_TH = 1.6;
 
 // ── Split-line joint: tongue on tray + groove in top shell ──
 LIP_H   = 2.5;      // tongue height above split
@@ -68,10 +75,13 @@ BOT_RND   = 1.2;    // bottom edge lead-in
 SPLIT_Z   = 12.0;
 
 // ── Derived stack ───────────────────────────────────────────
-GRID_W  = COLS * MOD_W + (COLS - 1) * GAP;    // 54.88
-GRID_H  = ROWS * MOD_H + (ROWS - 1) * GAP;    // 111.87
-INNER_W = GRID_W + 2 * WALL;                  // 58.88
-INNER_D = GRID_H + 2 * WALL;                  // 115.87
+GRID_W  = MOD_W + (COLS - 1) * COL_PITCH;     // 59.01
+GRID_H  = MOD_H + (ROWS - 1) * ROW_PITCH;     // 107.91
+// cavity must swallow whichever is wider: module grid or the carrier PCB
+CAV_W   = max(GRID_W + 0.8, PCB_W + 0.6);     // 60.10
+CAV_H   = max(GRID_H + 0.8, PCB_D + 0.6);     // 109.10
+INNER_W = CAV_W + 2 * WALL;                   // 64.90
+INNER_D = CAV_H + 2 * WALL;                   // 113.90
 PCB_OX  = (INNER_W - PCB_W) / 2;
 PCB_OY  = (INNER_D - PCB_D) / 2;
 PCB_Z   = FLOOR + PCB_LIFT;                   // 6.0 (carrier bottom)
@@ -84,14 +94,33 @@ CAP_TOP = MODF_Z + CAP_PROUD;                 // 31.6 (proud 6.2)
 // KiCad views the board from the top with +y DOWN, so once the PCB drops
 // component-up into the tray, kicad +x lands on the enclosure's -x side:
 //   enclosure_x = PCB_OX + (PCB_W - kicad_x)
-// USB (kicad x=27.5, centred) is mirror-invariant; J8 (kicad x=47.5,
-// card ejects the kicad x=55 edge) is adjacent to the enclosure x=0 wall.
+// USB (kicad x=29.75, centred) is mirror-invariant; J8 (kicad x=52.0,
+// card ejects the kicad x=59.5 edge) is adjacent to the enclosure x=0 wall.
 USB_W = 10.0;  USB_H = 4.4;  USB_R = 1.5;
-USB_CX = PCB_OX + (PCB_W - 27.5);
+USB_CX = PCB_OX + (PCB_W - 29.75);
 USB_CZ = PCB_Z + PCB_TH + 1.7;
 SD_W = 13.0;  SD_H = 3.0;
-SD_CY = PCB_OY + 75.0;
+SD_CY = PCB_OY + 72.4;
 SD_CZ = PCB_Z + PCB_TH + 1.0;
+// Qwiic (JST-SH, kicad x=49.0 on the rear y=0 edge)
+QW_W = 7.0;  QW_H = 3.6;
+QW_CX = PCB_OX + (PCB_W - 49.0);
+QW_CZ = PCB_Z + PCB_TH + 1.6;
+
+// ── Rev E glow + sensor features ────────────────────────────
+// 8x SK6812MINI-E edge LEDs shine out through wall slots (fill with
+// translucent filament, a glued diffuser strip, or leave open).
+// kicad: D1/D3/D5 @ x=3.0 (-> enclosure +x wall), D2/D4/D6 @ x=56.5
+// (-> enclosure x=0 wall), D7 @ (20.5,1.8) + D8 @ (38.0,1.8) rear.
+LED_SLOT_W = 7.0;  LED_SLOT_H = 2.6;
+LED_CY  = [PCB_OY + 17.95, PCB_OY + 54.25, PCB_OY + 90.55];
+LED_CZ  = PCB_Z + PCB_TH + 0.9;      // SK6812MINI-E optical centre
+LED_REAR_CX = [PCB_OX + (PCB_W - 20.5), PCB_OX + (PCB_W - 38.0)];
+// VEML7700 ambient light sensor between the key columns near the front
+// edge — Ø3 light-pipe hole straight through the face plate.
+ALS_CX = PCB_OX + (PCB_W - 29.75);
+ALS_CY = PCB_OY + 106.6;
+ALS_D  = 3.0;
 
 // ── Fasteners (real parts, CAD in hardware/3d/fasteners/) ───
 // Case:    4× M2×25 COUNTERSUNK flat head (DIN 965) from BELOW, one
@@ -114,13 +143,13 @@ INSERT_D = 3.2;  INSERT_L = 4.2; // Ruthex RX-M2x4
 SPACER_OD = 4.0; SPACER_BORE = 2.4;  // printed corner sleeve, 8.0 long
 FOOT_OFF  = 1.8;                 // foot centre offset (diagonal, inboard) from screw axis
 // (kicad x mirrors into the enclosure: x_e = PCB_OX + PCB_W − x_kicad)
-// Rev D corner screws: module centres ± (10.0, 14.625) — kicad H1–H4 at
-// (3.0, 2.975) / (51.9, 2.975) / (3.0, 108.825) / (51.9, 108.825)
+// Rev E corner screws: module centres ± (10.0, 14.625) — kicad H1–H4 at
+// (3.25, 3.32) / (56.25, 3.32) / (3.25, 105.17) / (56.25, 105.17)
 CORNER_POS = [
-    [PCB_OX + 52.0,  PCB_OY + 2.975],
-    [PCB_OX + 3.1,   PCB_OY + 2.975],
-    [PCB_OX + 52.0,  PCB_OY + 108.825],
-    [PCB_OX + 3.1,   PCB_OY + 108.825]
+    [PCB_OX + 56.25, PCB_OY + 3.325],
+    [PCB_OX + 3.25,  PCB_OY + 3.325],
+    [PCB_OX + 56.25, PCB_OY + 105.175],
+    [PCB_OX + 3.25,  PCB_OY + 105.175]
 ];
 
 // ── Stand ───────────────────────────────────────────────────
@@ -134,11 +163,11 @@ COL_PCB   = "#14442c";
 
 $fn = 64;
 
-// Module centres follow the PCB connector grid (KiCad truth:
-// J1@13,17.6 … pitch 28.9 × 38.3), NOT a symmetric wall inset —
-// keeps apertures + corner screws aligned with the real modules.
-function cx(c) = PCB_OX + 13.1 + c * 28.9;   // mirrored kicad truth (55 − 41.9)
-function cy(r) = PCB_OY + 17.6 + r * 38.3;
+// Module centres follow the PCB key grid (hardware/pinout.py truth:
+// cols kicad x 13.25/46.25, rows y 17.95 + r*36.3), NOT a symmetric
+// wall inset — keeps apertures + corner screws aligned with the modules.
+function cx(c) = PCB_OX + 46.25 - c * COL_PITCH;   // mirrored kicad truth
+function cy(r) = PCB_OY + 17.95 + r * ROW_PITCH;
 function mounts() = [[MOUNT_DX/2, MOUNT_DY/2], [-MOUNT_DX/2, MOUNT_DY/2],
                      [MOUNT_DX/2, -MOUNT_DY/2], [-MOUNT_DX/2, -MOUNT_DY/2]];
 
@@ -176,8 +205,8 @@ module deck_solid() {
 }
 
 module cavity_2d() {
-    // +0.8 total clearance so module edges never touch the walls
-    rsq2d(GRID_W + 0.8, GRID_H + 0.8, CORNER_R - WALL);
+    // sized for max(module grid + 0.8, PCB + 0.6) — see CAV_W/CAV_H
+    rsq2d(CAV_W, CAV_H, CORNER_R - WALL);
 }
 
 module cavity() {
@@ -188,7 +217,7 @@ module cavity() {
 // snap bump centres on the tongue's outer face (left/right walls,
 // located at the module row gaps so nothing inside is disturbed)
 function snap_pts() =
-    let(xo = INNER_W/2 - (GRID_W + 0.8)/2 - LIP_T,   // tongue outer face x (left)
+    let(xo = INNER_W/2 - CAV_W/2 - LIP_T,   // tongue outer face x (left)
         y1 = INNER_D * 0.32, y2 = INNER_D * 0.68)
     [[xo, y1], [xo, y2], [INNER_W - xo, y1], [INNER_W - xo, y2]];
 
@@ -238,13 +267,28 @@ module bottom_shell() {
             linear_extrude(0.9) rsq2d(USB_W + 3, USB_H + 3, USB_R + 1);
         }
 
-        // microSD slot — LEFT wall (x=0): J8 sits at kicad x=47.5 and its
-        // card mouth faces the kicad x=55 edge, which the mirror mapping
-        // places against this wall (v11 had it on the wrong side)
+        // microSD slot — LEFT wall (x=0): J8 sits at kicad x=52.0 and its
+        // card mouth faces the kicad x=59.5 edge, which the mirror mapping
+        // places against this wall
         translate([-0.1, SD_CY, SD_CZ]) rotate([0, 90, 0]) {
             linear_extrude(WALL + 1.2) rsq2d(SD_H, SD_W, 1.2);
             linear_extrude(0.8) rsq2d(SD_H + 2.4, SD_W + 3, 1.8);   // finger lead-in
         }
+
+        // Qwiic (JST-SH) opening — rear wall next to USB
+        translate([QW_CX, -0.1, QW_CZ]) rotate([-90, 0, 0])
+            linear_extrude(WALL + 1.2) rsq2d(QW_W, QW_H, 1.0);
+
+        // SK6812 edge-glow windows: 3 per side wall + 2 rear
+        for (yy = LED_CY) {
+            translate([-0.1, yy, LED_CZ]) rotate([0, 90, 0])
+                linear_extrude(WALL + 1.2) rsq2d(LED_SLOT_H, LED_SLOT_W, 1.0);
+            translate([INNER_W - WALL - 1.1, yy, LED_CZ]) rotate([0, 90, 0])
+                linear_extrude(WALL + 1.2) rsq2d(LED_SLOT_H, LED_SLOT_W, 1.0);
+        }
+        for (xx = LED_REAR_CX)
+            translate([xx, -0.1, LED_CZ]) rotate([-90, 0, 0])
+                linear_extrude(WALL + 1.2) rsq2d(5.0, LED_SLOT_H, 1.0);
 
         for (p = CORNER_POS) {
             // through-hole + countersink rising from the foot-recess floor
@@ -298,6 +342,11 @@ module top_shell() {
         for (p = CORNER_POS)
             translate([p[0], p[1], TOTAL_H - PLATE_T - 0.05])
                 cylinder(d = INSERT_D, h = INSERT_L + 0.05);
+
+        // VEML7700 light-pipe hole through the face plate (fit a Ø3
+        // clear acrylic rod or leave open — sensor sits right below)
+        translate([ALS_CX, ALS_CY, TOTAL_H - PLATE_T - 0.1])
+            cylinder(d = ALS_D, h = PLATE_T + TOP_RND + 0.3);
 
         // groove for the tray's tongue + snap recesses
         split_groove();
@@ -377,7 +426,7 @@ if (RENDER == "bottom") {
     modules_ghost();
 }
 
-echo("=== Open Screen Deck enclosure v13 (one-screw corner stack) ===");
+echo("=== Open Screen Deck enclosure v14 (Rev E wide-pitch + glow) ===");
 echo(str("Deck ", INNER_W, " x ", INNER_D, " x ", TOTAL_H, " mm | caps to ", CAP_TOP));
 echo(str("Carrier top z=", PCB_Z + PCB_TH, " | rear PCB z=", REAR_Z, " | module front z=", MODF_Z));
 echo("Assembly: modules->carrier (M2x5), cables, tray, snap top, 4x M2x25 corner screws through module nuts");

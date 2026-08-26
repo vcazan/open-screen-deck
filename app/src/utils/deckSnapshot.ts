@@ -136,6 +136,7 @@ export async function applyDeckSnapshot(
             bg: t.bg,
             ov: t.overlay ? 1 : 0,
             icon: t.icon,
+            draw: 0,
           },
         }),
       );
@@ -164,6 +165,7 @@ export async function applyDeckSnapshot(
     target.keys.map((k) => k.action2),
     target.keys.map((k) => k.action3),
   );
+  ops.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
 }
 
 /** Swap the full identity of two key slots (config + actions + media). */

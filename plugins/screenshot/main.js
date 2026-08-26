@@ -86,8 +86,9 @@ export function activate(api) {
         flags.push('-c');
       }
 
-      // shutter flash
+      // shutter flash + click
       await ctx.paintFace(brandFace((g) => cameraGlyph(g, true), '', '', '#8fd4a8'));
+      ctx.beep(2800, 45);
       await ctx.shell(`screencapture ${flags.join(' ')} ${target}`.trim());
       setTimeout(() => {
         ctx.paintFace(brandFace((g) => cameraGlyph(g), 'screenshot', mode, '#8fd4a8')).catch(() => {});

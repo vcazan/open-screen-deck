@@ -3,6 +3,8 @@
 #include "pages.h"
 #include "display.h"
 #include "orientation.h"
+#include "leds.h"
+#include "haptics.h"
 #include <USBHIDKeyboard.h>
 
 extern USBHIDKeyboard Keyboard;   // owned by the sketch
@@ -11,6 +13,7 @@ bool     companionMode   = false;
 uint32_t lastCompanionMs = 0;
 
 // Debounce state, per physical switch
+static bool     lastReading[KEY_COUNT] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
 static bool     lastState[KEY_COUNT]    = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
 static uint32_t lastDebounce[KEY_COUNT] = {0};
 
@@ -19,6 +22,11 @@ static uint32_t lastDebounce[KEY_COUNT] = {0};
 static uint8_t  tapCount[KEY_COUNT]  = {0};
 static uint32_t tapLastMs[KEY_COUNT] = {0};
 static uint8_t  tapSlot[KEY_COUNT]   = {0};
+
+// Non-blocking HID press — never delay() the main loop for keyboard output
+static bool     hidHeld      = false;
+static uint8_t  hidHeldKey   = 0;
+static uint32_t hidReleaseAt = 0;
 
 void emitKeyEvent(uint8_t idx, const char* action) {
     if (!Serial) return;
@@ -31,6 +39,20 @@ static uint8_t maxTapsFor(uint8_t slot) {
     return 1;
 }
 
+static void pressHid(uint8_t hid) {
+    Keyboard.press(hid);
+    hidHeldKey   = hid;
+    hidHeld      = true;
+    hidReleaseAt = millis() + 20;
+}
+
+void serviceHidRelease() {
+    if (!hidHeld) return;
+    if ((int32_t)(millis() - hidReleaseAt) < 0) return;
+    Keyboard.release(hidHeldKey);
+    hidHeld = false;
+}
+
 /** Perform the action bound to a resolved tap level, tell the companion. */
 static void fireTap(uint8_t slot, uint8_t taps) {
     uint8_t hid = taps >= 3 ? keys[slot].hid3
@@ -38,18 +60,14 @@ static void fireTap(uint8_t slot, uint8_t taps) {
                             : keys[slot].hidKey;
 
     if (hid == HID_PAGE_NEXT) {
-        // Page switching is firmware-owned: identical standalone and
-        // under the companion
         switchPage((currentPage + 1) % pageCount);
     } else if (hid == HID_PAGE_PREV) {
         switchPage((currentPage + pageCount - 1) % pageCount);
     } else if (hid >= HID_PAGE_BASE && hid < HID_PAGE_BASE + MAX_PAGES) {
-        switchPage(hid - HID_PAGE_BASE);  // no-op beyond pageCount
+        switchPage(hid - HID_PAGE_BASE);
     } else if (!companionMode && hid != 0 &&
                !(hid >= HID_INTERNAL_MIN && hid <= HID_INTERNAL_MAX)) {
-        Keyboard.press(hid);
-        delay(20);
-        Keyboard.release(hid);
+        pressHid(hid);
     }
 
     if (Serial) {
@@ -69,7 +87,6 @@ static void resolveTaps(uint8_t pos) {
 
 static void registerTap(uint8_t pos, uint8_t slot, uint32_t now) {
     if (tapCount[pos] == 0) {
-        // First press: single-only keys fire immediately (no tap window)
         if (maxTapsFor(slot) == 1) {
             fireTap(slot, 1);
             return;
@@ -78,7 +95,6 @@ static void registerTap(uint8_t pos, uint8_t slot, uint32_t now) {
     }
     tapCount[pos]++;
     tapLastMs[pos] = now;
-    // Reached the highest bound level — resolve now instead of waiting
     if (tapCount[pos] >= maxTapsFor(tapSlot[pos])) {
         resolveTaps(pos);
     }
@@ -87,25 +103,30 @@ static void registerTap(uint8_t pos, uint8_t slot, uint32_t now) {
 void serviceKeys() {
     uint32_t now = millis();
     for (int i = 0; i < KEY_COUNT; i++) {
-        bool state = digitalRead(KEY_PINS[i]);
+        bool reading = digitalRead(KEY_PINS[i]);
 
-        if (state != lastState[i]) {
+        if (reading != lastReading[i]) {
             lastDebounce[i] = now;
+            lastReading[i]  = reading;
         }
 
-        if ((now - lastDebounce[i]) > DEBOUNCE_MS) {
-            // Switches are wired to physical modules — report the LOGICAL
-            // key on the CURRENT page (global slot index)
+        if ((now - lastDebounce[i]) > DEBOUNCE_MS && reading != lastState[i]) {
             uint8_t slot = slotOfPos(PHYS_TO_LOGICAL[i]);
-            if (state == LOW && lastState[i] == HIGH) {
+            lastState[i] = reading;
+            if (reading == LOW) {
                 drawKeyPressed(slot);
+                hapticClick();
+                if (clickBeepEnabled()) piezoBeep(2400, 35);
+                // press glow in the key's own color (565 → 8-bit channels)
+                uint16_t c = keys[slot].bgColor;
+                ledsPulse(i, ((c >> 11) & 0x1F) << 3,
+                             ((c >> 5) & 0x3F) << 2,
+                             (c & 0x1F) << 3);
                 registerTap(i, slot, now);
-            } else if (state == HIGH && lastState[i] == LOW) {
+            } else {
                 emitKeyEvent(slot, "release");
             }
         }
-
-        lastState[i] = state;
     }
 }
 

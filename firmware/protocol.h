@@ -1,5 +1,5 @@
 /**
- * protocol.h — the USB CDC serial protocol (v0.12).
+ * protocol.h — the USB CDC serial protocol (v14).
  *
  * Newline-terminated commands, JSON event lines back. This is the single
  * channel the companion app uses for everything: key config, images,
@@ -14,6 +14,15 @@
 
 /** Accumulate serial bytes into lines and dispatch them. Call every loop(). */
 void handleSerialInput();
+
+/** Pump an in-progress binary frame upload without blocking keys. */
+void serviceFrameReceive();
+
+/** True while a binary frame upload is in flight (defer long blits). */
+bool frameRxActive();
+
+/** Flush deferred NVS writes when the host goes quiet. Call every loop(). */
+void serviceConfigFlush();
 
 /** Execute one protocol command line. */
 void handleCommand(String& line);

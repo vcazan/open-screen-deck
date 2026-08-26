@@ -15,8 +15,8 @@ chmod +x scripts/build_hardware.sh
 2. **Schematic** — run ERC; confirm ESP32 ↔ ScreenKey nets
 3. **PCB** — finish routing from ESP32 module to global labels (generator places footprints + SPI trunk)
 4. **DRC** — target zero errors (current generator may show courtyard/clearance warnings until routing complete)
-5. **3D view** — USB-C aligns with enclosure rear slot; microSD reachable via bottom cutout
-6. Assign **LCSC/JLC** parts in BOM tool if using SMT assembly
+5. **3D view** — USB-C aligns with enclosure rear slot; microSD reachable via side slot; Qwiic on the rear wall; ALS under the face-plate hole
+6. Assign **LCSC/JLC** parts in BOM tool if using SMT assembly (recommended on Rev E)
 
 ## Upload to fab
 
@@ -26,7 +26,7 @@ chmod +x scripts/build_hardware.sh
 | Drill | `hardware/pcb/gerbers/*-NPTH.drl` and `*-PTH.drl` |
 | BOM | `hardware/pcb/bom.csv` |
 
-**Suggested spec:** 2-layer, 1.6 mm, FR4, **ENIG**, matte black mask, 1 oz copper.
+**Suggested spec:** 2-layer, 1.6 mm, FR4, **ENIG**, matte black mask, 1 oz copper. Board is **59.5 × 108.5 mm**.
 
 ## Assembly order
 
@@ -43,15 +43,21 @@ chmod +x scripts/build_hardware.sh
 ## Bring-up tests
 
 - [ ] USB-C powers board; 3.3 V at module connectors  
-- [ ] All six displays init (SPI)  
+- [ ] All six displays init (dual SPI — J1–J3 bus A, J4–J6 bus B)  
 - [ ] All six keys debounce  
 - [ ] HID F13–F18 typed on Mac/Win/Linux (page 1 defaults)  
-- [ ] CDC serial: `PING` → `pong`  
+- [ ] CDC serial: `PING` → `pong`; `INFO` reports `fw`, `leds`, `imu`, `als`, `haptic`  
+- [ ] Eight SK6812s light (`SET_LED` / `SELFTEST`)  
+- [ ] ALS lux updates; backlight auto-dim reacts to covering the face-plate hole  
+- [ ] IMU pickup haptic (lift the board)  
 - [ ] microSD mounts (`SD_INFO` reports the card)  
 
 ## Enclosure fit
 
 - [ ] M2×25 corner screws pass H1–H4 → module nuts → top-plate inserts  
 - [ ] USB-C flush with rear slot  
-- [ ] microSD access slot (optional cutout)  
+- [ ] Qwiic opening lines up with J9  
+- [ ] microSD access slot  
+- [ ] LED wall windows over D1–D8  
+- [ ] ALS light-pipe over the VEML7700  
 - [ ] Top shell closes; keys travel OK  

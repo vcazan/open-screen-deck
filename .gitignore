@@ -32,6 +32,9 @@ __pycache__/
 site/
 .venv-docs/
 
+# ── private local plugins (tokens, merchant IDs — never publish) ──
+plugins/private/
+
 # ── app ──
 node_modules/
 app/dist/

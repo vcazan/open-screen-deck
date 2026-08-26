@@ -79,6 +79,7 @@ export function activate(api) {
         clearInterval(sessions.get(ctx.slot));
         sessions.delete(ctx.slot);
         ctx.paintFace(drawIdle()).catch(() => {});
+        ctx.beep(400, 90);
         ctx.log('pomodoro cancelled');
         return;
       }
@@ -88,19 +89,29 @@ export function activate(api) {
       const breakColor = settings.breakColor || '#e05252';
       const start = Date.now();
       ctx.log(`pomodoro started: ${Math.round(focusMs / 60000)}m focus`);
+      ctx.beep(1760, 50);
 
+      let phase = 'focus';
       const tick = () => {
         const elapsed = Date.now() - start;
         if (elapsed < focusMs) {
           const left = focusMs - elapsed;
           ctx.paintFace(drawRing(mmss(left), 'focus', left / focusMs, focusColor)).catch(() => {});
         } else if (elapsed < focusMs + breakMs) {
+          if (phase !== 'break') {
+            phase = 'break';
+            ctx.beep(988, 90);
+            setTimeout(() => ctx.beep(1319, 140), 120);
+          }
           const left = focusMs + breakMs - elapsed;
           ctx.paintFace(drawRing(mmss(left), 'break', left / breakMs, breakColor)).catch(() => {});
         } else {
           clearInterval(sessions.get(ctx.slot));
           sessions.delete(ctx.slot);
           ctx.paintFace(drawRing('DONE', 'nice work', 1, '#2fd47c')).catch(() => {});
+          ctx.beep(880, 80);
+          setTimeout(() => ctx.beep(1175, 80), 110);
+          setTimeout(() => ctx.beep(1568, 200), 240);
           ctx.log('pomodoro complete');
         }
       };

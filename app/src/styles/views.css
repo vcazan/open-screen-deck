@@ -1355,46 +1355,144 @@
 }
 
 /* Firmware updater */
-.fw-flash-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+.fw-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  pointer-events: none;
+  padding: 0 20px 18px;
 }
 
-.fw-flash-stage {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
+.fw-overlay-sheet {
+  pointer-events: auto;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 18px 20px 20px;
+  border-radius: 16px 16px 14px 14px;
+  background: linear-gradient(180deg, #161b22 0%, #10141a 100%);
+  border: 1px solid rgba(224, 165, 47, 0.28);
+  box-shadow:
+    0 -18px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  animation: fw-sheet-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.fw-recover {
+.fw-overlay.flashing .fw-overlay-sheet {
+  border-color: rgba(47, 212, 196, 0.32);
+}
+
+.fw-overlay.done .fw-overlay-sheet {
+  border-color: rgba(47, 212, 196, 0.4);
+}
+
+@keyframes fw-sheet-in {
+  from {
+    transform: translateY(28px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.fw-overlay-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.fw-overlay-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e0a52f;
+}
+
+.fw-overlay.flashing .fw-overlay-kicker,
+.fw-overlay.done .fw-overlay-kicker {
+  color: var(--accent-soft);
+}
+
+.fw-overlay-title {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.fw-overlay-dismiss {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  transition: background 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.fw-overlay-dismiss:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.fw-overlay-meter {
+  display: flex;
+  align-items: baseline;
   gap: 14px;
-  padding: 13px 16px;
-  margin-bottom: 14px;
-  border-radius: 11px;
-  background: rgba(224, 165, 47, 0.1);
-  border: 1px solid rgba(224, 165, 47, 0.35);
-  font-size: 12.5px;
+  margin-top: 18px;
+}
+
+.fw-overlay-pct {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: var(--accent-soft);
+  min-width: 4.2ch;
+}
+
+.fw-overlay-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #070a0d;
+  overflow: hidden;
+}
+
+.fw-overlay-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1a8f86, var(--accent));
+  transition: width 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fw-overlay-stage {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.fw-overlay-hint,
+.fw-overlay-copy {
+  margin: 8px 0 0;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-muted);
 }
 
-.fw-recover strong {
-  color: #e0a52f;
-}
-
-.fw-flash-ok {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(47, 212, 196, 0.1);
-  border: 1px solid rgba(47, 212, 196, 0.3);
-  font-size: 12.5px;
-  color: var(--accent-soft);
+.fw-overlay-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .settings-list {
@@ -1424,4 +1522,76 @@
   background: var(--bg3);
   border-radius: 999px;
   color: var(--text-muted);
+}
+
+.badge.ok {
+  background: rgba(47, 212, 196, 0.12);
+  color: var(--accent-soft);
+}
+
+.badge.off {
+  opacity: 0.45;
+}
+
+/* Deck hardware card (Rev E: LEDs, sensors, haptics) */
+.hw-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hw-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hw-slider input[type='range'] {
+  width: 140px;
+  accent-color: var(--accent);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hw-slider input[type='range']:disabled {
+  opacity: 0.35;
+}
+
+.hw-slider-value {
+  min-width: 42px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hw-slider-value.dimmed {
+  opacity: 0.6;
+}
+
+.hw-color {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-hairline);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.hw-color:hover {
+  transform: scale(1.08);
+}
+
+.hw-color::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.hw-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 5px;
+}
+
+.hw-selftest {
+  font-weight: 500;
+  line-height: 1.5;
 }

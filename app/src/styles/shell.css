@@ -583,6 +583,30 @@
   color: var(--text-muted);
 }
 
+.conn-pill.bootloader {
+  border-color: rgba(224, 165, 47, 0.45);
+  background: rgba(224, 165, 47, 0.12);
+}
+
+.conn-pill.bootloader .conn-pill-dot {
+  background: #e0a52f;
+  box-shadow: 0 0 8px #e0a52f;
+  animation: blink-dot 1.2s ease-in-out infinite;
+}
+
+.conn-pill.bootloader .conn-pill-label {
+  color: #f0d08a;
+}
+
+.conn-pill.flashing {
+  border-color: rgba(47, 212, 196, 0.55);
+  background: rgba(47, 212, 196, 0.14);
+}
+
+.conn-pill.flashing .conn-pill-dot {
+  animation: blink-dot 0.7s ease-in-out infinite;
+}
+
 .fw-chip {
   font-family: var(--font-mono);
   font-size: 11.5px;
@@ -621,6 +645,23 @@
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
+}
+
+/* The physical deck was picked up (IMU) — the on-screen twin lifts with it */
+.deck-layer.picked-up {
+  animation: deck-pickup 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes deck-pickup {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-7px) scale(1.012);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* View transitions */

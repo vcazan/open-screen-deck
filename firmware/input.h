@@ -26,5 +26,8 @@ void serviceKeys();
 /** Resolve tap sequences whose window expired. Call every loop(). */
 void serviceTapTimeouts();
 
+/** Release a deferred HID keypress. Call every loop(). */
+void serviceHidRelease();
+
 /** Emit a key event line to the companion ("press" carries taps). */
 void emitKeyEvent(uint8_t idx, const char* action);

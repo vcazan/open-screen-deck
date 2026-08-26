@@ -1,7 +1,11 @@
-# Serial Protocol (v0.12)
+# Serial Protocol (v14)
 
 USB **CDC serial** at **115200 baud**, newline-terminated lines.  
 No custom kernel driver — companion app opens the CDC port (Web Serial or Tauri).
+
+Firmware **0.14.x** speaks protocol **14** (Rev E sensors, LEDs, haptics).
+Older decks still speak the v0.12 command set below; unknown commands are
+ignored.
 
 ## Pages (v0.10+, dynamic since v0.11)
 
@@ -27,7 +31,7 @@ under the companion alike):
 Boot:
 
 ```json
-{"event":"info","name":"Open Screen Deck","fw":"0.12.0","proto":12,"keys":6,"pages":2,"page":0,"orient":0,"mode":"hid"}
+{"event":"info","name":"Open Screen Deck","fw":"0.14.5","proto":14,"keys":6,"pages":2,"page":0,"orient":0,"mode":"hid","sd":true,"psram":8388608,"leds":8,"imu":true,"als":true,"haptic":true,"lux":120.0,"autodim":true,"bright":255,"clickbeep":false}
 ```
 
 Key press / release (`index` is the global slot; `taps` from v0.12):
@@ -79,6 +83,14 @@ Page changed (SET_PAGE or an on-device page key):
 | `SET_PAGE n` | show page n on the six screens; persists to NVS (v0.10+) |
 | `SET_PAGES 1..8` | resize the page list; emits `{"event":"pages","pages":n}` (v0.11+) |
 | `SET_ORIENT 0..3` | deck orientation: 0 portrait, 1 landscape CW, 2 flipped, 3 landscape CCW (v0.9+). Rotates all displays, remaps key positions row-major, persists to NVS |
+| `SET_LED {"index":0,"r":255,"g":64,"b":0}` | host-own one logical LED (0–5 keys, 6 link, 7 SD; `-1` = all). Until `LED_CLEAR` (v14) |
+| `LED_CLEAR` | drop host LED overrides; reactive status resumes (v14) |
+| `AUTODIM 1\|0` | VEML7700 drives backlight PWM (v14) |
+| `SET_BRIGHT 0..255` | manual backlight; implies auto-dim off (v14) |
+| `CLICK_BEEP 1\|0` | piezo alongside haptic click (v14) |
+| `HAPTIC` | play a click on the DRV2605L / piezo (v14) |
+| `BEEP [freq] [ms]` | piezo tone (v14) |
+| `SELFTEST` | walk panels, LEDs, haptic, piezo; reports sensor presence (v14) |
 | `SD_LS /osd/keys` | list a directory (v0.6+) |
 | `SD_RM /osd/keys/0/icon.rgb565` | delete a file or empty dir (v0.6+) |
 
@@ -210,14 +222,22 @@ On-board **microSD** holds offline icons and animation frames:
 
 Animations survive reboot — replay with `ANIM n fps` any time.
 
-See [Architecture](../hardware/architecture.md) for video limits on shared SPI.
+See [Architecture](../hardware/architecture.md) for video limits on dual SPI.
 
-## Animation rules (physics of a shared SPI bus)
+## Animation rules
 
 - **One key animates at a time** (`ANIM n fps`); 1–30 fps
 - Frames stream from SD: `/osd/keys/n/anim/0001.rgb565`, `0002` …
 - All six keys **cannot** run video simultaneously — see
   [Architecture](../hardware/architecture.md) for the bandwidth math
+
+## Rev E hardware (protocol 14+)
+
+`INFO` includes `leds`, `imu`, `als`, `haptic`, `lux`, `autodim`, `bright`,
+and `clickbeep`. The companion's Settings → Deck hardware card uses these
+commands. Logical LED index 0–5 follows keys J1–J6; 6 is the rear USB-link
+indicator; 7 is SD status. Physical SK6812 wiring order is in
+`hardware/pinout.py` (`LED_CHAIN_REFS`).
 
 ## Quick test (Chrome console via Web Serial)
 

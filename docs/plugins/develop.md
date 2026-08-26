@@ -52,6 +52,7 @@ export function activate(api) {
     async execute(settings, ctx) {
       ctx.log('pressed!');                          // protocol console
       await ctx.paintFace(drawLiveFace());          // stream a live frame
+      ctx.beep(1760, 60);                            // timer done / async result
       const res = await ctx.fetch(settings.url);    // HTTP via Rust
       await ctx.shell('say hello');                 // shell command
       await ctx.hotkey('cmd+shift+4');              // hotkey chord
@@ -91,6 +92,8 @@ Draw with regular canvas 2D at 128×128:
 - **`ctx.paintFace(canvas)`** — streams a draw-only frame (`SET_FACE`).
   Use it for live data: prices, clocks, progress rings, status feedback.
   Never touches flash/SD, so it's safe at a few fps.
+- **`ctx.beep(freq?, ms?)`** — chirps the deck piezo. Use it for timer
+  done / async results, not every key press (that's a user setting).
 - Transparent pixels in either take on the key's background color.
 
 While your action is assigned, the inspector hides its manual appearance

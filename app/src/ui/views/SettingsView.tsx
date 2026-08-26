@@ -1,14 +1,31 @@
 import { useEffect, useState } from 'react';
 import { isTauri } from '../../transport/TauriSerialTransport';
+import type { InfoEvent, SelftestEvent } from '../../protocol/types';
 import { Button } from '../components/Button';
+import { DeckHardwareCard } from './DeckHardwareCard';
 import { FirmwareCard } from './FirmwareCard';
 
 interface SettingsViewProps {
   deviceFw?: string | null;
   usbConnected?: boolean;
+  deviceInfo?: InfoEvent | null;
+  lastSelftest?: SelftestEvent | null;
+  sendCommand?: (line: string) => void;
+  bundledFw?: string | null;
+  flashing?: boolean;
+  onFlashFirmware?: () => void;
 }
 
-export function SettingsView({ deviceFw = null, usbConnected = false }: SettingsViewProps) {
+export function SettingsView({
+  deviceFw = null,
+  usbConnected = false,
+  deviceInfo = null,
+  lastSelftest = null,
+  sendCommand,
+  bundledFw = null,
+  flashing = false,
+  onFlashFirmware,
+}: SettingsViewProps) {
   const [autostart, setAutostart] = useState(false);
 
   useEffect(() => {
@@ -52,7 +69,17 @@ export function SettingsView({ deviceFw = null, usbConnected = false }: Settings
   return (
     <div className="settings-view">
       <div className="settings-stack">
-        <FirmwareCard deviceFw={deviceFw} usbConnected={usbConnected} />
+        <FirmwareCard
+          deviceFw={deviceFw}
+          usbConnected={usbConnected}
+          bundled={bundledFw}
+          flashing={flashing}
+          onFlash={() => onFlashFirmware?.()}
+        />
+
+        {sendCommand && (
+          <DeckHardwareCard info={deviceInfo} selftest={lastSelftest} sendCommand={sendCommand} />
+        )}
 
         <div className="settings-card">
           <h2>Companion</h2>

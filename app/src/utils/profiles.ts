@@ -1,5 +1,14 @@
 import type { ProfileData } from '../protocol/types';
-import { KEY_COUNT, MAX_PAGES, TOTAL_KEYS, defaultKeyForSlot } from '../protocol/constants';
+import {
+  HID_PAGE_BASE,
+  HID_PAGE_NEXT,
+  HID_PAGE_PREV,
+  HID_TAP_ARM,
+  KEY_COUNT,
+  MAX_PAGES,
+  TOTAL_KEYS,
+  defaultKeyForSlot,
+} from '../protocol/constants';
 import type { KeyAction } from '../actions/types';
 
 /**
@@ -74,6 +83,40 @@ export function profileToActions(profile: ProfileData): KeyAction[] {
     out[i] = { type: 'hid', code: k.hid ?? defaultKeyForSlot(i).hid };
   });
   return out;
+}
+
+/** Map a host-side action to the HID code the firmware should store on the key. */
+export function actionToDeviceHid(action: KeyAction | undefined, slot: number): number {
+  if (!action) return defaultKeyForSlot(slot).hid;
+  switch (action.type) {
+    case 'hid':
+      return action.code;
+    case 'page_next':
+      return HID_PAGE_NEXT;
+    case 'page_prev':
+      return HID_PAGE_PREV;
+    case 'page':
+      return HID_PAGE_BASE + action.page;
+    default:
+      return HID_TAP_ARM;
+  }
+}
+
+/** Map double/triple actions to firmware h2/h3 (0 = unbound). */
+export function actionToTapHid(action: KeyAction | null | undefined): number {
+  if (!action) return 0;
+  switch (action.type) {
+    case 'hid':
+      return action.code;
+    case 'page_next':
+      return HID_PAGE_NEXT;
+    case 'page_prev':
+      return HID_PAGE_PREV;
+    case 'page':
+      return HID_PAGE_BASE + action.page;
+    default:
+      return HID_TAP_ARM;
+  }
 }
 
 export function downloadProfile(profile: ProfileData, filename = 'osd-profile.json'): void {
@@ -168,4 +211,52 @@ export function profileToKeyConfigs(profile: ProfileData) {
       icon: k?.icon ?? d.icon,
     };
   });
+}
+
+/** Compare profile key content only (ignore page count). */
+export function deviceProfileKeysMatch(
+  deviceKeys: {
+    label: string;
+    sublabel: string;
+    hidKey: number;
+    hid2?: number;
+    hid3?: number;
+    bgColor: number;
+  }[],
+  profile: ProfileData,
+): boolean {
+  const slotCount = profilePageCount(profile) * KEY_COUNT;
+  const configs = profileToKeyConfigs(profile);
+  const actions = profileToActions(profile);
+  const multi = profileToMultiActions(profile);
+  for (let i = 0; i < slotCount; i++) {
+    const k = deviceKeys[i];
+    if (!k) return false;
+    if (k.label !== configs[i].label) return false;
+    if (k.sublabel !== configs[i].sublabel) return false;
+    if (k.hidKey !== actionToDeviceHid(actions[i], i)) return false;
+    if (k.bgColor !== configs[i].bgColor) return false;
+    if ((k.hid2 ?? 0) !== actionToTapHid(multi.double[i])) return false;
+    if ((k.hid3 ?? 0) !== actionToTapHid(multi.triple[i])) return false;
+  }
+  return true;
+}
+
+/** True when the device mirror already matches a profile (skip redundant sync). */
+export function deviceKeysMatchProfile(
+  deviceKeys: {
+    label: string;
+    sublabel: string;
+    hidKey: number;
+    hid2?: number;
+    hid3?: number;
+    bgColor: number;
+  }[],
+  devicePages: number,
+  profile: ProfileData,
+): boolean {
+  return (
+    devicePages === profilePageCount(profile) &&
+    deviceProfileKeysMatch(deviceKeys, profile)
+  );
 }

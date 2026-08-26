@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { dbgTrace } from './utils/debugTrace';
 import './styles/tokens.css';
 import './styles/global.css';
 import './styles/shell.css';
@@ -8,9 +9,11 @@ import './styles/console.css';
 import './styles/views.css';
 import './styles/onboarding.css';
 import { useDeviceManager } from './hooks/useDevice';
+import { useFirmwareUpdate } from './hooks/useFirmwareUpdate';
 import { useProfileStore } from './hooks/useProfileStore';
 import { ProfileStore } from './utils/profileStore';
 import { DeviceView } from './ui/DeviceView';
+import { FirmwareOverlay } from './ui/FirmwareOverlay';
 import { KeyInspector } from './ui/KeyInspector';
 import { IconRail } from './ui/shell/IconRail';
 import { Sidebar } from './ui/shell/Sidebar';
@@ -36,6 +39,11 @@ import {
   profilePageCount,
   profileToKeyConfigs,
   profileToMultiActions,
+  profileToActions,
+  actionToDeviceHid,
+  actionToTapHid,
+  deviceKeysMatchProfile,
+  deviceProfileKeysMatch,
 } from './utils/profiles';
 import {
   deleteProfileMedia,
@@ -45,10 +53,6 @@ import {
   saveProfileMedia,
 } from './utils/profileMedia';
 import {
-  HID_PAGE_BASE,
-  HID_PAGE_NEXT,
-  HID_PAGE_PREV,
-  HID_TAP_ARM,
   KEY_COUNT,
   MAX_PAGES,
   TOTAL_KEYS,
@@ -67,9 +71,8 @@ import {
 } from './utils/deckSnapshot';
 import { executeAction } from './actions/executor';
 import { createTapResolver } from './utils/tapResolver';
-import { saveKeyMediaImage } from './utils/keyMedia';
+import { loadKeyMedia, saveKeyMediaImage } from './utils/keyMedia';
 import { DEFAULT_MIC_FACES } from './actions/types';
-import { profileToActions } from './utils/profiles';
 import { isTauri } from './transport/TauriSerialTransport';
 import { obsClient, loadObsSettings, saveObsSettings } from './integrations/obs';
 import { Onboarding, isOnboardingPending } from './ui/Onboarding';
@@ -119,6 +122,15 @@ export default function App() {
   }, []);
   const stageRef = useRef<HTMLDivElement>(null);
 
+  // Mirror the physical deck being picked up (IMU) with a gentle on-screen lift
+  const [pickupPulse, setPickupPulse] = useState(false);
+  useEffect(() => {
+    if (!device.lastPickupAt) return;
+    setPickupPulse(true);
+    const t = setTimeout(() => setPickupPulse(false), 900);
+    return () => clearTimeout(t);
+  }, [device.lastPickupAt]);
+
   const keyActions = useKeyActions();
 
   const fwVersion =
@@ -127,17 +139,50 @@ export default function App() {
       : null;
 
   const connected = device.connectionState === 'connected';
+  const usbLive = device.transportMode === 'webserial' && connected;
+
+  const fwUpdate = useFirmwareUpdate({
+    usbConnected: usbLive,
+    paintBanner: async () => {
+      device.device?.drawFlashingBanner();
+      device.sendCommand('FLASHING');
+      await new Promise((r) => setTimeout(r, 400));
+    },
+  });
+
+  useEffect(() => {
+    if (fwUpdate.stuckInBootloader) device.device?.drawFlashingBanner();
+  }, [fwUpdate.stuckInBootloader, device.device]);
+
+  useEffect(() => {
+    if (fwUpdate.flash.phase !== 'done') return;
+    const t = window.setTimeout(() => fwUpdate.dismiss(), 4000);
+    return () => window.clearTimeout(t);
+  }, [fwUpdate.flash.phase, fwUpdate.dismiss]);
+
+  const connectionKind =
+    fwUpdate.flash.phase === 'flashing'
+      ? 'flashing'
+      : fwUpdate.stuckInBootloader
+        ? 'bootloader'
+        : connected
+          ? 'ok'
+          : 'offline';
 
   const connectionLabel =
-    device.connectionState === 'connected'
-      ? device.transportMode === 'simulator'
-        ? 'Simulator connected'
-        : 'USB connected'
-      : device.connectionState === 'connecting'
-        ? 'Connecting…'
-        : device.connectionState === 'error'
-          ? 'Connection error'
-          : 'Disconnected';
+    fwUpdate.flash.phase === 'flashing'
+      ? `Updating firmware ${fwUpdate.flash.percent}%`
+      : fwUpdate.stuckInBootloader
+        ? 'Bootloader mode'
+        : device.connectionState === 'connected'
+          ? device.transportMode === 'simulator'
+            ? 'Simulator connected'
+            : 'USB connected'
+          : device.connectionState === 'connecting'
+            ? 'Connecting…'
+            : device.connectionState === 'error'
+              ? 'Connection error'
+              : 'Disconnected';
 
   const txCount = device.consoleEntries.filter((e) => e.direction === 'tx').length;
   const rxCount = device.consoleEntries.length - txCount;
@@ -398,47 +443,82 @@ export default function App() {
     else localStorage.removeItem(ACTIVE_PROFILE_KEY);
   }, []);
 
+  const assignPluginFaces = useCallback(
+    async (data: ReturnType<typeof buildProfile>, onlySlots?: number[]) => {
+      const actions = profileToActions(data);
+      const indexes =
+        onlySlots ?? Array.from({ length: actions.length }, (_, i) => i);
+      for (const i of indexes) {
+        const a = actions[i];
+        if (a?.type === 'plugin' && a.plugin) {
+          dbgTrace(`plugin: assigning face slot ${i} ← ${a.plugin}`);
+          device.logLocal(`plugin faces: slot ${i} ← ${a.plugin}`);
+          // One retry: the first face streamed after connect can race the
+          // deck's DRAW_ALL redraw and time out — a lost face is permanent
+          // (the plugin never re-fires onAssign), so recover it here.
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              await pluginHost.notifyAssigned(a.plugin, a.settings, i);
+              break;
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err);
+              dbgTrace(`plugin: assign attempt ${attempt + 1} failed slot ${i}: ${msg}`);
+              if (attempt === 1) {
+                device.logLocal(`plugin assign failed (key ${(i % KEY_COUNT) + 1}): ${msg}`);
+              } else {
+                await new Promise((r) => setTimeout(r, 800));
+              }
+            }
+          }
+        }
+      }
+    },
+    [device],
+  );
+
   const applyProfileData = useCallback(
-    (data: ReturnType<typeof buildProfile>) => {
+    async (data: ReturnType<typeof buildProfile>) => {
       // Pure protocol — works on both the simulator and real hardware.
       // Each SET_KEY persists to device NVS, so profiles survive reboot.
       // The profile owns the page count: the deck resizes to match.
-      device.sendCommand(
-        encodeCommand({ type: 'SET_PAGES', pages: profilePageCount(data) }),
-      );
+      // Every command waits for its ack: firing 48 SET_KEYs blind overflows
+      // the firmware's CDC RX buffer and corrupts the stream.
+      await device
+        .sendCommandAcked(
+          encodeCommand({ type: 'SET_PAGES', pages: profilePageCount(data) }),
+          '"cmd":"SET_PAGES"',
+        )
+        .catch(() => {});
       const configs = profileToKeyConfigs(data);
+      const actions = profileToActions(data);
+      const multi = profileToMultiActions(data);
       for (let i = 0; i < configs.length; i++) {
-        device.sendCommand(
-          encodeCommand({
-            type: 'SET_KEY',
-            payload: {
-              index: i,
-              label: configs[i].label,
-              sublabel: configs[i].sublabel,
-              hid: configs[i].hidKey,
-              bg: configs[i].bgColor,
-              icon: configs[i].icon,
-            },
-          }),
-        );
+        await device
+          .sendCommandAcked(
+            encodeCommand({
+              type: 'SET_KEY',
+              payload: {
+                index: i,
+                label: configs[i].label,
+                sublabel: configs[i].sublabel,
+                hid: actionToDeviceHid(actions[i], i),
+                h2: actionToTapHid(multi.double[i]),
+                h3: actionToTapHid(multi.triple[i]),
+                bg: configs[i].bgColor,
+                icon: configs[i].icon,
+                draw: 0,
+              },
+            }),
+            `"cmd":"SET_KEY","index":${i}}`,
+          )
+          .catch(() => {});
       }
       // Host-side actions travel with the profile (v2); v1 maps to HID.
-      // Multi-tap bindings re-arm the device via the tap-arm effect.
-      const multi = profileToMultiActions(data);
-      const actions = profileToActions(data);
       keyActions.setAll(actions, multi.double, multi.triple);
-      // Plugin keys own their faces — let each plugin paint its slot.
-      // Sequential so network-backed plugins (weather, crypto) don't stampede.
-      void (async () => {
-        for (let i = 0; i < configs.length; i++) {
-          const a = actions[i];
-          if (a?.type === 'plugin' && a.plugin) {
-            await pluginHost.notifyAssigned(a.plugin, a.settings, i).catch(() => {});
-          }
-        }
-      })();
+      device.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
+      void assignPluginFaces(data);
     },
-    [device, keyActions],
+    [device, keyActions, assignPluginFaces],
   );
 
   /** Rendered face thumbnails straight from the live key canvases. */
@@ -456,11 +536,39 @@ export default function App() {
     });
   }, [device.device]);
 
+  /**
+   * Re-push stored images/animations onto the deck. Firmware RAM faces die
+   * on reboot and a missing microSD has nowhere to persist them, so every
+   * USB connect must stream them again — even when SET_KEY labels already
+   * match (that used to skip this and leave "PREV / Page" text cards).
+   *
+   * Push-only: do not delete device files. Full profile apply still uses
+   * applyProfileMedia for that.
+   */
+  const restoreHostMedia = useCallback(async (profileId: string | null) => {
+    const stored = profileId ? await loadProfileMedia(profileId) : null;
+    const sim = device.device?.getMediaSnapshot();
+    for (let i = 0; i < TOTAL_KEYS; i++) {
+      const anim = stored?.animations[i] ?? sim?.animations[i];
+      const icon = stored?.icons[i] ?? sim?.icons[i] ?? loadKeyMedia(i).image;
+      try {
+        if (anim && anim.frames.length > 0) {
+          await device.sendAnimation(i, anim.frames, anim.fps);
+        } else if (icon) {
+          await device.sendSetImage(i, icon);
+        }
+      } catch {
+        device.logLocal(`restore media: key slot ${i + 1} failed`);
+      }
+    }
+  }, [device]);
+
   /** Push a profile's media (icons + animations) to the deck. */
   const applyProfileMedia = useCallback(
     async (profileId: string) => {
       const media = await loadProfileMedia(profileId);
       const current = device.device?.getState().media ?? [];
+      let needsRedraw = false;
       for (let i = 0; i < TOTAL_KEYS; i++) {
         const anim = media?.animations[i];
         const icon = media?.icons[i];
@@ -473,15 +581,21 @@ export default function App() {
           }
           if (icon) {
             await device.sendSetImage(i, icon);
-          } else if (!anim && had?.hasIcon) {
+          } else if (!anim) {
+            // Always attempt the delete on USB: the local mirror may not
+            // know about icons uploaded in a previous session, and stale
+            // SD icons paint over the key's real face (duplicate keys).
             await device
               .deleteSdPath(`/osd/keys/${i}/icon.rgb565`)
               .catch(() => {});
-            device.sendCommand(encodeCommand({ type: 'DRAW', index: i }));
+            needsRedraw = true;
           }
         } catch {
           device.logLocal(`profile media: key slot ${i + 1} failed to apply`);
         }
+      }
+      if (needsRedraw) {
+        device.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
       }
     },
     [device],
@@ -491,9 +605,10 @@ export default function App() {
   const handleApplyProfile = useCallback(
     (profile: { id: string; data: ReturnType<typeof buildProfile>; hasMedia?: boolean }) => {
       checkpoint(false); // Cmd+Z brings the previous deck back
-      applyProfileData(profile.data);
+      void applyProfileData(profile.data).then(() => {
+        void applyProfileMedia(profile.id);
+      });
       setActiveProfile(profile.id);
-      void applyProfileMedia(profile.id);
     },
     [applyProfileData, setActiveProfile, applyProfileMedia, checkpoint],
   );
@@ -640,33 +755,29 @@ export default function App() {
   // standalone); host-only actions get the silent TAP_ARM sentinel so the
   // firmware waits and reports taps. Unbound = 0 = zero-latency singles.
   const tapArmSigRef = useRef('');
+  const connectSyncDoneRef = useRef(false);
   useEffect(() => {
-    const derive = (a: (typeof keyActions.double)[number]): number => {
-      if (!a) return 0;
-      switch (a.type) {
-        case 'hid':
-          return a.code;
-        case 'page_next':
-          return HID_PAGE_NEXT;
-        case 'page_prev':
-          return HID_PAGE_PREV;
-        case 'page':
-          return HID_PAGE_BASE + a.page;
-        default:
-          return HID_TAP_ARM;
-      }
-    };
+    if (!connected) {
+      connectSyncDoneRef.current = false;
+    }
+  }, [connected]);
+
+  useEffect(() => {
     const arm = () => {
+      if (!connectSyncDoneRef.current) return;
       const wanted = Array.from({ length: TOTAL_KEYS }, (_, i) => ({
-        h2: derive(keyActions.double[i]),
-        h3: derive(keyActions.triple[i]),
+        h2: actionToTapHid(keyActions.double[i]),
+        h3: actionToTapHid(keyActions.triple[i]),
       }));
       const state = device.device?.getState();
       wanted.forEach(({ h2, h3 }, i) => {
         const k = state?.keys[i];
         if ((k?.hid2 ?? 0) === h2 && (k?.hid3 ?? 0) === h3) return;
         device.sendCommand(
-          encodeCommand({ type: 'SET_KEY', payload: { index: i, h2, h3 } }),
+          encodeCommand({
+            type: 'SET_KEY',
+            payload: { index: i, h2, h3, draw: 0 },
+          }),
         );
       });
       return JSON.stringify(wanted);
@@ -683,11 +794,95 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [keyActions.double, keyActions.triple, device, connected]);
 
+  // USB reconnect: re-push the active profile so plugin faces paint and
+  // host-side actions stay bound — one synchronized DRAW_ALL at the end.
+  const profileSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!connected) {
+      profileSyncedRef.current = false;
+      return;
+    }
+    if (device.transportMode !== 'webserial' || !device.keysMirrorReady) return;
+    if (profileSyncedRef.current) return;
+    profileSyncedRef.current = true;
+    dbgTrace(`sync: profile-sync firing (profile=${activeProfileId ?? 'none'})`);
+
+    // Always reveal what's in NVS — even with no active profile selected —
+    // then re-push any logos the host still has (firmware RAM is empty).
+    if (!activeProfileId) {
+      void restoreHostMedia(null).finally(() => {
+        device.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
+        connectSyncDoneRef.current = true;
+      });
+      return;
+    }
+
+    const stored = ProfileStore.get(activeProfileId);
+    if (!stored) {
+      void restoreHostMedia(null).finally(() => {
+        device.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
+        connectSyncDoneRef.current = true;
+      });
+      return;
+    }
+
+    const actions = profileToActions(stored.data);
+    const multi = profileToMultiActions(stored.data);
+    const state = device.device?.getState();
+    const profilePages = profilePageCount(stored.data);
+    const match =
+      state && deviceKeysMatchProfile(state.keys, state.pages, stored.data);
+    const keysMatch =
+      state && deviceProfileKeysMatch(state.keys, stored.data);
+
+    keyActions.setAll(actions, multi.double, multi.triple);
+    tapArmSigRef.current = `${connected}:${JSON.stringify([multi.double, multi.triple])}`;
+
+    void (async () => {
+      if (match) {
+        device.logLocal(
+          `profile: “${stored.name}” already on device — restoring faces`,
+        );
+        await restoreHostMedia(activeProfileId);
+        void assignPluginFaces(stored.data);
+      } else if (keysMatch && state!.pages !== profilePages) {
+        device.logLocal(
+          `profile: resizing deck to ${profilePages} pages — restoring faces`,
+        );
+        device.sendCommand(
+          encodeCommand({ type: 'SET_PAGES', pages: profilePages }),
+        );
+        await restoreHostMedia(activeProfileId);
+        void assignPluginFaces(stored.data);
+      } else {
+        await applyProfileData(stored.data);
+        void applyProfileMedia(activeProfileId);
+        device.logLocal(`profile: synced “${stored.name}” to hardware`);
+      }
+      connectSyncDoneRef.current = true;
+      tapArmSigRef.current = `${connected}:${JSON.stringify([multi.double, multi.triple])}`;
+    })();
+  }, [
+    connected,
+    device.transportMode,
+    device.keysMirrorReady,
+    activeProfileId,
+    applyProfileData,
+    applyProfileMedia,
+    restoreHostMedia,
+    assignPluginFaces,
+    device.device,
+    device.logLocal,
+    device.sendCommand,
+    keyActions,
+  ]);
+
   // Plugins: connect the host bridge, then load installed plugins (Tauri)
   const pluginLogTapRef = useRef<((line: string) => void) | null>(null);
   useEffect(() => {
     pluginHost.connect({
       log: (line) => {
+        dbgTrace(`plugin: ${line}`);
         device.logLocal(line);
         pluginLogTapRef.current?.(line); // debug-channel capture
       },
@@ -695,7 +890,13 @@ export default function App() {
         device.sendCommand(
           encodeCommand({
             type: 'SET_KEY',
-            payload: { index: slot, label: face.label, sublabel: face.sublabel, bg: face.bg },
+            payload: {
+              index: slot,
+              label: face.label,
+              sublabel: face.sublabel,
+              bg: face.bg,
+              draw: 1,
+            },
           }),
         );
       },
@@ -705,6 +906,9 @@ export default function App() {
       sendImage: async (slot, rgb565) => {
         saveKeyMediaImage(slot, rgb565, 'plugin');
         await device.sendSetImage(slot, rgb565);
+      },
+      beep: (freq, ms) => {
+        device.sendCommand(encodeCommand({ type: 'BEEP', freq, ms }));
       },
       // OBS rides the app's shared obs-websocket client; the obs-control
       // plugin owns the connection settings. Lazy-connects on first use.
@@ -768,6 +972,62 @@ export default function App() {
         mode: device.transportMode,
         media: device.device?.getState().media,
       }),
+      /** Dump the last N protocol console lines (tx/rx incl. firmware dbg). */
+      console: (n = 300) =>
+        device.consoleEntries.slice(-n).map((e) => `${e.direction} ${e.line}`),
+      /** Checksums of the active profile's stored media (IndexedDB). */
+      mediaSums: async () => {
+        if (!activeProfileId) return 'no active profile';
+        const media = await loadProfileMedia(activeProfileId);
+        if (!media) return 'no media stored';
+        const sum = (b: Uint8Array) => {
+          let s = 0;
+          for (let i = 0; i < b.length; i += 2) s += b[i] * 31 + b[i + 1];
+          return s;
+        };
+        return {
+          profile: activeProfileId,
+          icons: Object.fromEntries(
+            Object.entries(media.icons).map(([k, v]) => [k, sum(v)]),
+          ),
+          anims: Object.fromEntries(
+            Object.entries(media.animations).map(([k, v]) => [k, v.frames.length]),
+          ),
+        };
+      },
+      /** Checksums of the live USB mirror's SD icons. */
+      mirrorSums: () => {
+        const media = device.device?.getMediaSnapshot();
+        if (!media) return 'no device';
+        const sum = (b: Uint8Array) => {
+          let s = 0;
+          for (let i = 0; i < b.length; i += 2) s += b[i] * 31 + b[i + 1];
+          return s;
+        };
+        return Object.fromEntries(
+          Object.entries(media.icons).map(([k, v]) => [k, sum(v)]),
+        );
+      },
+      /**
+       * Recovery: wipe every stored + on-device icon for the active profile
+       * and let plugins repaint their branded faces from scratch. Use after
+       * a corrupted sync persisted images onto the wrong slots.
+       */
+      repairMedia: async () => {
+        if (!activeProfileId) return 'no active profile';
+        const media = await loadProfileMedia(activeProfileId);
+        if (media) {
+          media.icons = {};
+          await saveProfileMedia(activeProfileId, media);
+        }
+        for (let i = 0; i < TOTAL_KEYS; i++) {
+          await device.deleteSdPath(`/osd/keys/${i}/icon.rgb565`).catch(() => {});
+        }
+        device.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
+        const stored = ProfileStore.get(activeProfileId);
+        if (stored) await assignPluginFaces(stored.data);
+        return 'media repaired — icons wiped, plugin faces repainted';
+      },
       /** Visible-face fingerprint — proves the editor deck actually repainted. */
       face: (idx: number) => {
         const el = document.querySelectorAll('.key-cap canvas')[idx] as HTMLCanvasElement;
@@ -899,12 +1159,7 @@ export default function App() {
         if (!boot) return 'no bootloader port found';
         return invoke('deck_recover', { port: boot.path });
       },
-      flashFirmware: async () => {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const port = (await invoke('serial_is_open')) as string | null;
-        if (!port) return 'no port open';
-        return invoke('flash_firmware', { port });
-      },
+      flashFirmware: () => fwUpdate.startFlash().then(() => 'ok'),
       uploadTestImage: async (idx: number) => {
         // Top half green, bottom half transparent sentinel — the bottom
         // must render in the key's background color and follow recolors.
@@ -925,7 +1180,7 @@ export default function App() {
     return () => {
       delete w.__osd;
     };
-  }, [device]);
+  }, [device, activeProfileId, fwUpdate.startFlash]);
 
   // Real mic state from the companion backend (polled from the OS)
   useEffect(() => {
@@ -962,7 +1217,13 @@ export default function App() {
       device.sendCommand(
         encodeCommand({
           type: 'SET_KEY',
-          payload: { index: i, label: face.label, sublabel: face.sublabel, bg: face.bg },
+          payload: {
+            index: i,
+            label: face.label,
+            sublabel: face.sublabel,
+            bg: face.bg,
+            draw: 0,
+          },
         }),
       );
     });
@@ -1017,7 +1278,12 @@ export default function App() {
       device.sendCommand(
         encodeCommand({
           type: 'SET_KEY',
-          payload: { index: i, sublabel: active ? 'ON AIR' : 'Scene', bg: active ? 0x1c73 : 0x194b },
+          payload: {
+            index: i,
+            sublabel: active ? 'ON AIR' : 'Scene',
+            bg: active ? 0x1c73 : 0x194b,
+            draw: 0,
+          },
         }),
       );
     });
@@ -1058,7 +1324,7 @@ export default function App() {
   const handleApplyStarter = useCallback(
     (starter: StarterProfile) => {
       const { data } = starterToProfileData(starter);
-      applyProfileData(data);
+      void applyProfileData(data);
       const profile = saveProfile(starter.name, data, { hasMedia: false });
       setActiveProfile(profile.id);
     },
@@ -1078,9 +1344,10 @@ export default function App() {
         });
         await saveProfileMedia(profile.id, portable.media);
         if (applyAfter) {
-          applyProfileData(portable.data);
+          void applyProfileData(portable.data).then(() => {
+            void applyProfileMedia(profile.id);
+          });
           setActiveProfile(profile.id);
-          void applyProfileMedia(profile.id);
         }
         return;
       }
@@ -1091,7 +1358,7 @@ export default function App() {
         const name = file.name.replace(/(\.osdprofile)?\.json$/i, '') || 'Imported profile';
         const profile = saveProfile(name, data);
         if (applyAfter) {
-          applyProfileData(data);
+          void applyProfileData(data);
           setActiveProfile(profile.id);
         }
       } catch {
@@ -1139,10 +1406,12 @@ export default function App() {
               hid: def.hid,
               bg: def.bg,
               icon: def.icon,
+              draw: 0,
             },
           }),
         );
       }
+      device.sendCommand(encodeCommand({ type: 'DRAW_ALL' }));
     }
     keyActions.reset();
   };
@@ -1161,6 +1430,7 @@ export default function App() {
           sublabel: def.sublabel,
           hid: def.hid,
           bg: def.bg,
+          draw: 1,
         },
       }),
     );
@@ -1305,7 +1575,7 @@ export default function App() {
         if (assignNotifyTimer.current) clearTimeout(assignNotifyTimer.current);
         assignNotifyTimer.current = setTimeout(() => {
           void pluginHost.notifyAssigned(plugin, settings, slot);
-        }, 500);
+        }, 400);
       }
     },
     [checkpoint, keyActions, selectedSlot],
@@ -1399,6 +1669,7 @@ export default function App() {
           fwVersion={fwVersion}
           connected={connected}
           connectionLabel={connectionLabel}
+          connectionKind={connectionKind}
         />
 
         <div className="workspace-body">
@@ -1408,7 +1679,7 @@ export default function App() {
             tabIndex={-1}
           >
             <div
-              className={`deck-layer ${activeView === 'deck' ? 'visible' : 'hidden'}`}
+              className={`deck-layer ${activeView === 'deck' ? 'visible' : 'hidden'}${pickupPulse ? ' picked-up' : ''}`}
               aria-hidden={activeView !== 'deck'}
             >
               <DeviceView
@@ -1476,12 +1747,30 @@ export default function App() {
                 {activeView === 'settings' && (
                   <SettingsView
                     deviceFw={fwVersion}
-                    usbConnected={device.transportMode === 'webserial' && connected}
+                    usbConnected={usbLive}
+                    deviceInfo={
+                      device.deviceInfo?.event === 'info' ? device.deviceInfo : null
+                    }
+                    lastSelftest={device.lastSelftest}
+                    sendCommand={device.sendCommand}
+                    bundledFw={fwUpdate.bundled}
+                    flashing={fwUpdate.flash.phase === 'flashing'}
+                    onFlashFirmware={fwUpdate.startFlash}
                   />
                 )}
               </div>
             )}
           </div>
+
+          <FirmwareOverlay
+            flash={fwUpdate.flash}
+            stuckInBootloader={fwUpdate.stuckInBootloader}
+            recovering={fwUpdate.recovering}
+            usbConnected={usbLive}
+            onRecover={() => void fwUpdate.recoverDeck()}
+            onRetry={() => void fwUpdate.startFlash()}
+            onDismiss={fwUpdate.dismiss}
+          />
 
           {inspectorOpen && selectedSlot !== null && (
             <KeyInspector
@@ -1519,7 +1808,7 @@ export default function App() {
 
         <StatusBar
           connectionLabel={connectionLabel}
-          connected={connected}
+          connected={connectionKind !== 'offline'}
           deviceLabel="Open Screen Deck · 6 keys"
           txCount={txCount}
           rxCount={rxCount}

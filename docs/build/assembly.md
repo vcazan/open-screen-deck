@@ -12,10 +12,10 @@ first — see [3D Printing](../getting-started/printing.md) for settings.
 
 | Part | File | Print notes |
 |------|------|-------------|
-| Bottom tray | `deck_bottom_v13.stl` | Flat on bed, no supports |
-| Top shell | `deck_top_v13.stl` | Face-down, no supports |
-| Corner spacers ×4 | `corner_spacers_x4_v13.stl` | 100% infill recommended |
-| Desk stand (optional) | `deck_stand_v13.stl` | Upright, 15–20% infill |
+| Bottom tray | `deck_bottom_v14.stl` | Flat on bed, no supports |
+| Top shell | `deck_top_v14.stl` | Face-down, no supports |
+| Corner spacers ×4 | `corner_spacers_x4_v14.stl` | 100% infill recommended |
+| Desk stand (optional) | `deck_stand_v14.stl` | Upright, 15–20% infill |
 
 PETG or PLA+, 0.2 mm layers, 3 walls.
 

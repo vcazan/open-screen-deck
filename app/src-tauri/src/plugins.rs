@@ -82,8 +82,10 @@ pub struct PluginHttpResult {
 /// HTTP for plugins (`ctx.fetch`). Runs in Rust because the webview blocks
 /// plain-http and CORS-less endpoints — exactly what Hue bridges, local
 /// webhooks, and most home-automation targets are.
-#[tauri::command]
-pub fn plugin_http(
+///
+/// Blocking ureq on a worker thread so a slow Grafana/Snowflake query
+/// cannot freeze the UI (sync commands run on Tauri's main thread).
+fn plugin_http_sync(
     method: String,
     url: String,
     headers: Option<std::collections::HashMap<String, String>>,
@@ -93,7 +95,7 @@ pub fn plugin_http(
         return Err(format!("unsupported URL: {url}"));
     }
     let mut req = ureq::request(&method.to_uppercase(), &url)
-        .timeout(std::time::Duration::from_secs(15));
+        .timeout(std::time::Duration::from_secs(60));
     if let Some(headers) = headers {
         for (k, v) in &headers {
             req = req.set(k, v);
@@ -116,6 +118,18 @@ pub fn plugin_http(
         }),
         Err(e) => Err(e.to_string()),
     }
+}
+
+#[tauri::command]
+pub async fn plugin_http(
+    method: String,
+    url: String,
+    headers: Option<std::collections::HashMap<String, String>>,
+    body: Option<String>,
+) -> Result<PluginHttpResult, String> {
+    tokio::task::spawn_blocking(move || plugin_http_sync(method, url, headers, body))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 /// Store install: download every listed file and write it into the plugin

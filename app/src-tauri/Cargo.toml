@@ -30,6 +30,7 @@ rdev = { version = "0.5", features = ["unstable_grab"] }
 sysinfo = "0.33"
 espflash = { version = "4", default-features = false, features = ["serialport"] }
 ureq = { version = "2", features = ["tls"] }
+tokio = { version = "1", default-features = false, features = ["rt"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = [

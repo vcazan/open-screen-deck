@@ -43,7 +43,11 @@ device.
 - **A plugin store** — crypto tickers, weather, clocks, Hue, Home
   Assistant, OBS… each drawing its own key face, with ask-first updates
   and release notes
-- **In-app firmware updates** — flash the deck over USB in one click
+- **In-app firmware updates** — flash the deck over USB in one click,
+  with a live progress overlay and bootloader recovery
+- **Rev E hardware** — IMU pickup, auto-dim from ambient light, haptic
+  click, eight edge-glow LEDs, Qwiic expansion — all controllable from
+  Settings when a Rev E deck is connected
 
 Plugins don't just set labels — they own their keys:
 
@@ -60,8 +64,9 @@ Plugins don't just set labels — they own their keys:
 
     ---
 
-    KiCad PCB + Gerbers, OpenSCAD case + STLs, a complete BOM, and an
-    illustrated 45-minute assembly. ~$100 in parts, no special tools.
+    KiCad PCB + Gerbers (Rev E: sensors, dual SPI, edge glow), OpenSCAD
+    case + STLs, a complete BOM, and an illustrated 45-minute assembly.
+    ~$100 in parts, no special tools.
 
     [:octicons-arrow-right-24: Parts list](getting-started/parts.md) ·
     [Assembly](build/assembly.md) ·
@@ -71,8 +76,9 @@ Plugins don't just set labels — they own their keys:
 
     ---
 
-    ESP32-S3 Arduino firmware: USB HID + serial protocol, per-key LCDs,
-    microSD animations, 8 pages, multi-tap — fully standalone.
+    ESP32-S3 Arduino firmware: USB HID + serial protocol, dual-SPI LCDs,
+    microSD animations, 8 pages, multi-tap, sensors and glow — fully
+    standalone.
 
     [:octicons-arrow-right-24: Flashing](firmware/flashing.md) ·
     [Serial protocol](firmware/protocol.md)
@@ -95,10 +101,11 @@ Plugins don't just set labels — they own their keys:
 |--|--|
 | **Keys** | 6× Waveshare 0.85″ ScreenKey — 128×128 IPS + mechanical switch per key |
 | **Pages** | up to 8 pages × 6 keys = 48 slots, switchable on-device |
-| **Brain** | ESP32-S3 (16 MB flash, 8 MB PSRAM) on a custom 55×112 mm carrier PCB |
+| **Brain** | ESP32-S3 (16 MB flash, 8 MB PSRAM) on a custom **59.5 × 108.5 mm** Rev E carrier |
+| **Sensors** | LSM6DS3TR-C IMU, VEML7700 ambient light, DRV2605L haptics, 8× SK6812 glow, Qwiic |
 | **Host link** | USB-C → standard HID keyboard + serial config channel |
 | **Media** | microSD icons/animations on-device, live faces streamed over USB |
-| **Case** | 3D-printed deck + optional 25° stand, closed by 4 screws |
+| **Case** | 64.9 × 113.9 × 28.2 mm printed deck + optional 25° stand, 4 screws |
 | **Cost** | ~$100 in parts ($66 = the six key modules) |
 
 ## Start here

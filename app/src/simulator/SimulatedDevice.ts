@@ -11,7 +11,10 @@ import {
   HID_PAGE_NEXT,
   HID_PAGE_PREV,
   KEY_COUNT,
+  LED_COUNT,
+  LED_REAR_LINK,
   MAX_PAGES,
+  PROTOCOL_VERSION,
   NVS_STORAGE_KEY,
   SD_STORAGE_KEY,
   SIM_SD_SIZE_MB,
@@ -34,6 +37,7 @@ import {
 } from './drawKey';
 import { drawOverlay } from '../utils/overlay';
 import { substituteTransparency } from '../protocol/rgb565';
+import { FLASH_KEY_FACES } from '../firmware/flashFaces';
 
 export type LineCallback = (line: string) => void;
 export type StateCallback = () => void;
@@ -119,6 +123,17 @@ export class SimulatedDevice {
   private page = 0;
   private pageCount = 1;
 
+  // Rev E hardware state (proto 14+)
+  private ledColors: { r: number; g: number; b: number }[] = Array.from(
+    { length: LED_COUNT },
+    () => ({ r: 0, g: 0, b: 0 }),
+  );
+  private brightness = 255;
+  private autoDim = true;
+  private clickBeep = false;
+  /** Last SET_IMAGE / SET_FACE per slot — page switches blit this, like firmware PSRAM cache. */
+  private faceCache: (Uint8Array | undefined)[] = Array(TOTAL_KEYS);
+
   // ── Page/slot helpers (mirrors firmware v0.10) ─────────────
   private posOfSlot(slot: number): number {
     return slot % KEY_COUNT;
@@ -152,13 +167,13 @@ export class SimulatedDevice {
     }
 
     this.sd = { icons: {}, animations: {}, usedBytes: 0 };
+    // Simulator is always "connected" — link LED glows like real firmware
+    this.ledColors[LED_REAR_LINK] = { r: 0, g: 24, b: 8 };
     this.loadNvs();
     this.loadSd();
     this.loadOrientation();
     this.loadPage();
-    for (let p = 0; p < KEY_COUNT; p++) {
-      this.drawKey(this.slotOfPos(p));
-    }
+    this.drawVisiblePage();
   }
 
   onLine(cb: LineCallback): void {
@@ -259,7 +274,11 @@ export class SimulatedDevice {
     if (h3 !== undefined) k.hid3 = h3;
     if (bg !== undefined) k.bgColor = bg;
     if (ov !== undefined) k.overlay = ov !== 0;
-    this.drawKey(index);
+  }
+
+  /** Redraw the six keys on the current page (one pass, one UI tick). */
+  redrawVisiblePage(): void {
+    this.drawVisiblePage();
   }
 
   /** Handle a newline-terminated command line from the host. */
@@ -280,7 +299,7 @@ export class SimulatedDevice {
       if (idx >= 0 && idx < TOTAL_KEYS) this.drawKey(idx);
     } else if (trimmed === 'DRAW_ALL') {
       this.stopAnimation();
-      for (let p = 0; p < KEY_COUNT; p++) this.drawKey(this.slotOfPos(p));
+      this.drawVisiblePage();
     } else if (trimmed.startsWith('SET_KEY ')) {
       this.handleSetKey(trimmed);
     } else if (trimmed.startsWith('SET_IMAGE ')) {
@@ -303,9 +322,8 @@ export class SimulatedDevice {
         this.stopAnimation();
         this.orientation = o;
         this.saveOrientation();
-        for (let p = 0; p < KEY_COUNT; p++) this.drawKey(this.slotOfPos(p));
+        this.drawVisiblePage();
         this.emit({ event: 'ok', cmd: 'SET_ORIENT' });
-        this.notifyState();
       }
     } else if (trimmed.startsWith('SET_PAGES ')) {
       const n = parseInt(trimmed.slice(10), 10);
@@ -327,9 +345,76 @@ export class SimulatedDevice {
       this.handleSdLs(trimmed.slice(5).trim() || '/');
     } else if (trimmed.startsWith('SD_RM ')) {
       this.handleSdRm(trimmed.slice(6).trim());
+    } else if (trimmed.startsWith('SET_LED ')) {
+      this.handleSetLed(trimmed);
+    } else if (trimmed === 'LED_CLEAR') {
+      for (let i = 0; i < LED_COUNT; i++) this.ledColors[i] = { r: 0, g: 0, b: 0 };
+      this.ledColors[LED_REAR_LINK] = { r: 0, g: 24, b: 8 };
+      this.emit({ event: 'ok', cmd: 'LED_CLEAR' });
+      this.notifyState();
+    } else if (trimmed.startsWith('SET_BRIGHT ')) {
+      const v = parseInt(trimmed.slice(11), 10);
+      if (isNaN(v) || v < 0 || v > 255) {
+        this.emit({ event: 'error', msg: 'bad_brightness' });
+      } else {
+        this.autoDim = false;
+        this.brightness = Math.max(8, v);
+        this.emit({ event: 'ok', cmd: 'SET_BRIGHT' });
+        this.notifyState();
+      }
+    } else if (trimmed.startsWith('AUTODIM ')) {
+      this.autoDim = trimmed.slice(8).trim() !== '0';
+      this.emit({ event: 'ok', cmd: 'AUTODIM' });
+    } else if (trimmed === 'HAPTIC') {
+      this.emit({ event: 'ok', cmd: 'HAPTIC' });
+    } else if (trimmed.startsWith('BEEP')) {
+      this.emit({ event: 'ok', cmd: 'BEEP' });
+    } else if (trimmed.startsWith('CLICK_BEEP ')) {
+      this.clickBeep = trimmed.slice(11).trim() !== '0';
+      this.emit({ event: 'ok', cmd: 'CLICK_BEEP' });
+    } else if (trimmed === 'SELFTEST') {
+      this.emit({
+        event: 'selftest',
+        panels: KEY_COUNT,
+        sd: this.sdMounted,
+        imu: true,
+        als: true,
+        lux: 240.0,
+        haptic: true,
+        psram: 8 * 1024 * 1024,
+      });
+    } else if (trimmed === 'FLASHING') {
+      this.drawFlashingBanner();
+      this.emit({ event: 'ok', cmd: 'FLASHING' });
     } else {
       this.emit({ event: 'error', msg: 'unknown_command' });
     }
+  }
+
+  private handleSetLed(line: string): void {
+    try {
+      const p = JSON.parse(line.slice(8)) as { index: number; r: number; g: number; b: number };
+      if (p.index < -1 || p.index >= LED_COUNT) {
+        this.emit({ event: 'error', msg: 'bad_led_index' });
+        return;
+      }
+      const clamp = (v: number) => Math.max(0, Math.min(255, v | 0));
+      const c = { r: clamp(p.r), g: clamp(p.g), b: clamp(p.b) };
+      if (p.index === -1) {
+        for (let i = 0; i < LED_COUNT; i++) this.ledColors[i] = { ...c };
+      } else {
+        this.ledColors[p.index] = c;
+      }
+      this.emit({ event: 'ok', cmd: 'SET_LED' });
+      this.notifyState();
+    } catch {
+      this.emit({ event: 'error', msg: 'bad_led_index' });
+    }
+  }
+
+  /** Current LED colors (logical order) — for on-screen glow rendering. */
+  getLedColors(): { r: number; g: number; b: number }[] {
+    return this.ledColors.map((c) => ({ ...c }));
   }
 
   /** Handle raw binary payload following send_data (SET_IMAGE / SET_ANIM). */
@@ -348,7 +433,7 @@ export class SimulatedDevice {
       if (data.length !== FRAME_BYTES) {
         this.emit({ event: 'error', msg: kind === 'image' ? 'image_timeout' : 'anim_timeout' });
       } else if (kind === 'face') {
-        // Live tile frame — drawn only, never persisted (mirrors SET_FACE)
+        this.faceCache[idx] = new Uint8Array(data);
         if (this.slotVisible(idx)) {
           if (this.animKey === idx) this.stopAnimation();
           drawRgb565ToCanvas(this.contexts[this.posOfSlot(idx)], data);
@@ -357,11 +442,12 @@ export class SimulatedDevice {
         this.notifyState();
       } else if (kind === 'image') {
         this.stopAnimation();
+        this.faceCache[idx] = new Uint8Array(data);
         if (this.sdMounted) {
           this.sd.icons[idx] = new Uint8Array(data);
           this.recalcSdUsage();
           this.saveSd();
-          this.drawKey(idx); // from SD: applies transparency + overlay
+          this.drawKey(idx); // from cache/SD: applies transparency + overlay
         } else if (this.slotVisible(idx)) {
           drawRgb565ToCanvas(this.contexts[this.posOfSlot(idx)], data);
         }
@@ -481,10 +567,9 @@ export class SimulatedDevice {
     }
     this.stopAnimation();
     this.page = page;
-    for (let p = 0; p < KEY_COUNT; p++) this.drawKey(this.slotOfPos(p));
+    this.drawVisiblePage();
     this.savePage();
     this.emit({ event: 'page', page: this.page });
-    this.notifyState();
   }
 
   /**
@@ -508,6 +593,7 @@ export class SimulatedDevice {
         // the app cleaning SD paths on remove
         delete this.sd.icons[s];
         delete this.sd.animations[s];
+        delete this.faceCache[s];
       }
       this.recalcSdUsage();
       this.saveSd();
@@ -516,7 +602,7 @@ export class SimulatedDevice {
     this.pageCount = n;
     if (this.page >= this.pageCount) {
       this.page = this.pageCount - 1;
-      for (let p = 0; p < KEY_COUNT; p++) this.drawKey(this.slotOfPos(p));
+      this.drawVisiblePage();
       this.emit({ event: 'page', page: this.page });
     }
     this.savePage();
@@ -529,8 +615,7 @@ export class SimulatedDevice {
     if (page >= 0 && page < this.pageCount && page !== this.page) {
       this.stopAnimation();
       this.page = page;
-      for (let p = 0; p < KEY_COUNT; p++) this.drawKey(this.slotOfPos(p));
-      this.notifyState();
+      this.drawVisiblePage();
     }
   }
 
@@ -584,9 +669,7 @@ export class SimulatedDevice {
     this.sd = { icons: {}, animations: {}, usedBytes: 0 };
     localStorage.removeItem(NVS_STORAGE_KEY);
     localStorage.removeItem(SD_STORAGE_KEY);
-    for (let p = 0; p < KEY_COUNT; p++) {
-      this.drawKey(this.slotOfPos(p));
-    }
+    this.drawVisiblePage();
     this.saveNvs();
     this.saveSd();
     this.notifyState();
@@ -605,12 +688,21 @@ export class SimulatedDevice {
       event: 'info',
       name: DEVICE_NAME,
       fw: FIRMWARE_VERSION,
+      proto: PROTOCOL_VERSION,
       keys: KEY_COUNT,
       pages: this.pageCount,
       page: this.page,
       sd: this.sdMounted,
       psram: 8 * 1024 * 1024,
       orient: this.orientation,
+      leds: LED_COUNT,
+      imu: true,
+      als: true,
+      haptic: true,
+      lux: 240.0,
+      autodim: this.autoDim,
+      bright: this.brightness,
+      clickbeep: this.clickBeep,
     });
   }
 
@@ -667,6 +759,7 @@ export class SimulatedDevice {
     const h3 = extractJsonInt(line, 'h3', this.keys[idx].hid3 ?? 0);
     const bg = extractJsonInt(line, 'bg', this.keys[idx].bgColor);
     const ov = extractJsonInt(line, 'ov', this.keys[idx].overlay ? 1 : 0);
+    const draw = extractJsonInt(line, 'draw', 1);
 
     // null = field absent (keep current); '' = explicit clear
     if (lbl !== null) this.keys[idx].label = lbl.slice(0, 15);
@@ -679,7 +772,7 @@ export class SimulatedDevice {
     this.keys[idx].overlay = ov !== 0;
 
     this.saveConfig(idx);
-    this.drawKey(idx);
+    if (draw) this.drawKey(idx);
     this.emit({ event: 'ok', cmd: 'SET_KEY', index: idx });
     this.notifyState();
   }
@@ -841,6 +934,7 @@ export class SimulatedDevice {
     if (iconMatch) {
       const i = Number(iconMatch[1]);
       delete this.sd.icons[i];
+      delete this.faceCache[i];
       this.drawKey(i);
     } else if (frameMatch) {
       const anim = this.sd.animations[Number(frameMatch[1])];
@@ -874,10 +968,39 @@ export class SimulatedDevice {
     }
   }
 
-  private drawKey(idx: number): void {
+  private drawVisiblePage(): void {
+    for (let p = 0; p < KEY_COUNT; p++) this.drawKey(this.slotOfPos(p), false);
+    this.notifyState();
+  }
+
+  /** Paint the six keys with the pre-flash banner (mirrors firmware). */
+  drawFlashingBanner(): void {
+    this.stopAnimation();
+    for (let pos = 0; pos < KEY_COUNT; pos++) {
+      const face = FLASH_KEY_FACES[pos];
+      drawKeyToCanvas(this.contexts[pos], {
+        label: face.label,
+        sublabel: face.sublabel,
+        bgColor: face.bg,
+        fgColor: 0xffff,
+        index: pos,
+      });
+    }
+    this.notifyState();
+  }
+
+  private drawKey(idx: number, notify = true): void {
     if (!this.slotVisible(idx)) return; // slot lives on another page
     const ctx = this.contexts[this.posOfSlot(idx)];
     const k = this.keys[idx];
+    if (this.faceCache[idx]) {
+      drawRgb565ToCanvas(ctx, substituteTransparency(this.faceCache[idx], k.bgColor));
+      if (k.overlay) {
+        drawOverlay(ctx, { label: k.label, sublabel: k.sublabel });
+      }
+      if (notify) this.notifyState();
+      return;
+    }
     if (this.sdMounted && this.sd.icons[idx]) {
       // Raw background + live text overlay — mirrors firmware drawKey().
       // Transparent (sentinel) pixels adopt the key's background color.
@@ -886,7 +1009,7 @@ export class SimulatedDevice {
         // Text only — firmware can't render glyph paths over media
         drawOverlay(ctx, { label: k.label, sublabel: k.sublabel });
       }
-      this.notifyState();
+      if (notify) this.notifyState();
       return;
     }
     drawKeyToCanvas(ctx, {
@@ -897,7 +1020,7 @@ export class SimulatedDevice {
       index: this.posOfSlot(idx),
       icon: k.icon,
     });
-    this.notifyState();
+    if (notify) this.notifyState();
   }
 
   private startAnimation(idx: number, fps: number): void {
@@ -1073,7 +1196,7 @@ export class SimulatedDevice {
         } else {
           this.migrateLegacySd();
         }
-        for (let i = 0; i < KEY_COUNT; i++) this.drawKey(i);
+        for (let i = 0; i < KEY_COUNT; i++) this.drawKey(i, false);
         this.notifyState();
       })
       .catch(() => {});

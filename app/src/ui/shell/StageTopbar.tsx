@@ -7,6 +7,7 @@ interface StageTopbarProps {
   fwVersion: string | null;
   connected: boolean;
   connectionLabel: string;
+  connectionKind?: 'ok' | 'offline' | 'bootloader' | 'flashing';
   actions?: ReactNode;
 }
 
@@ -15,6 +16,7 @@ export function StageTopbar({
   fwVersion,
   connected,
   connectionLabel,
+  connectionKind = connected ? 'ok' : 'offline',
   actions,
 }: StageTopbarProps) {
   const meta = VIEW_META[activeView];
@@ -26,7 +28,7 @@ export function StageTopbar({
         <p className="stage-subtitle">{meta.subtitle}</p>
       </div>
       <div className="stage-topbar-right">
-        <div className={`conn-pill ${connected ? '' : 'offline'}`}>
+        <div className={`conn-pill ${connectionKind === 'ok' ? '' : connectionKind}`}>
           <span className="conn-pill-dot" aria-hidden />
           <span className="conn-pill-label">{connectionLabel}</span>
         </div>

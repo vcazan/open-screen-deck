@@ -42,8 +42,21 @@ export class TauriSerialTransport implements Transport {
   private wantConnection = false;
   /** IPC calls are async — chain writes so lines/bytes hit the wire in order. */
   private writeChain: Promise<void> = Promise.resolve();
+  /** Serialize connect(): React re-renders can call it concurrently, which
+   *  double-registered serial-line listeners (every line counted twice) and
+   *  reopened the port mid-sync, dropping in-flight GET_KEYS responses. */
+  private connectPromise: Promise<void> | null = null;
 
   async connect(): Promise<void> {
+    if (this.state === 'connected') return;
+    if (this.connectPromise) return this.connectPromise;
+    this.connectPromise = this.doConnect().finally(() => {
+      this.connectPromise = null;
+    });
+    return this.connectPromise;
+  }
+
+  private async doConnect(): Promise<void> {
     if (!isTauri()) throw new Error('Not running inside the desktop app');
     this.setState('connecting');
     this.wantConnection = true;

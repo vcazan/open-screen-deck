@@ -1,10 +1,10 @@
 /**
  * config.h — every pin, constant, and tunable in one place.
  *
- * This file is the firmware side of the project's "single pinout truth":
- * it must agree with hardware/pcb (schematic + layout) and
- * docs/hardware (architecture page). If you change a pin here, change it
- * everywhere in the same commit.
+ * The canonical pinout lives in hardware/pinout.py: the PCB/schematic
+ * generators cross-check this file against it at generation time and
+ * hard-fail on divergence. If you change a pin here, change pinout.py
+ * and regenerate the hardware in the same commit.
  */
 
 #pragma once
@@ -12,17 +12,49 @@
 #include <Arduino.h>
 
 // ── Identity ────────────────────────────────────────────────────────
-#define FIRMWARE_VERSION "0.12.0"
-#define PROTOCOL_VERSION 12
+#define FIRMWARE_VERSION "0.14.5"
+#define PROTOCOL_VERSION 14
 
-// ── Pins (ESP32-S3-WROOM-1 on the Tier B carrier PCB) ───────────────
-#define PIN_MOSI  11   // shared SPI: displays + SD
-#define PIN_MISO  15   // SD read
-#define PIN_SCK   12   // shared SPI clock
-#define PIN_DC    14   // display data/command (shared)
-#define PIN_RST   21   // display reset (shared)
-#define PIN_BL    13   // backlight, all modules tied
-#define PIN_SD_CS 16   // microSD chip select
+// ── Debug ───────────────────────────────────────────────────────────
+// 1 → emit {"event":"dbg",...} lines for every draw/blit/batch change so
+// the companion console shows exactly which slot hits which display.
+#define DEBUG_DRAW 1
+
+// ── Pins (ESP32-S3-WROOM-1 on the Rev E carrier PCB) ────────────────
+// SPI bus A (FSPI): panels J1-J3 + microSD
+#define PIN_MOSI_A 11
+#define PIN_SCK_A  12
+#define PIN_MISO   15   // SD read (displays are write-only)
+#define PIN_DC_A   14
+#define PIN_SD_CS  16   // microSD chip select
+// SPI bus B (HSPI): panels J4-J6
+#define PIN_MOSI_B 17
+#define PIN_SCK_B  18
+#define PIN_DC_B   8
+// Shared display lines
+#define PIN_RST 21      // reset, all panels on both buses
+#define PIN_BL  13      // backlight (LEDC PWM — ALS auto-dim)
+// I2C: IMU + ambient light + haptic driver + Qwiic port
+#define PIN_SDA     6
+#define PIN_SCL     7
+#define PIN_IMU_INT 9   // LSM6DS3TR-C INT1 (pickup / tap)
+// Outputs
+#define PIN_LED_DATA  48  // SK6812 chain (via level shifter)
+#define PIN_PIEZO     43  // LEDC tone
+#define PIN_HAPTIC_EN 44  // DRV2605L enable
+
+// Legacy aliases (pre-Rev E single-bus names)
+#define PIN_MOSI PIN_MOSI_A
+#define PIN_SCK  PIN_SCK_A
+#define PIN_DC   PIN_DC_A
+
+// ── LEDs ────────────────────────────────────────────────────────────
+// Logical order: 0-5 = per-key status (J1..J6), 6 = rear-left (link),
+// 7 = rear-right (SD). LED_CHAIN[] in leds.cpp maps chain position →
+// logical index (physical routing order differs).
+#define LED_COUNT 8
+#define LED_REAR_LINK 6
+#define LED_REAR_SD   7
 
 // Per-module chip selects and key switch inputs, in wiring order J1..J6.
 extern const uint8_t CS_PINS[];

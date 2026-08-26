@@ -1,17 +1,31 @@
 Reference,Value,Footprint,Qty,MPN,Supplier,Notes
-H1-H4,MountingHole 2.2mm,MountingHole:MountingHole_2.2mm_M2,4,,,M2x25 corner case screws pass through @ (2 4.95) (52.9 4.95) (2 106.85) (52.9 106.85) into the corner-module nuts
+H1-H4,MountingHole 2.2mm,MountingHole:MountingHole_2.2mm_M2,4,,,M2x25 corner case screws pass through into the corner-module nuts
+H5-H16,MountingHole 2.2mm,MountingHole:MountingHole_2.2mm_M2,12,,,Module standoff clearance holes (M2x5 into ScreenKey factory standoffs)
 J1-J6,Molex PicoBlade 9P right-angle,Connector_Molex:Molex_PicoBlade_53261-0971_1x09-1MP_P1.25mm_Horizontal,6,53261-0971,Molex,Same MX1.25/PicoBlade family as the module connector; in-box cable plugs in; pin1=KEY. Verified alternate: HDGC HDGC1251WR-S-9P (SMT PicoBlade clone; JLC-stocked)
-J7,USB-C receptacle,Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal,1,USB4105-GF-A,GCT,Horizontal top-mount; port exits rear board edge @ X=27.5mm
-J8,microSD push-push,Connector_Card:microSD_HC_Hirose_DM3D-SF,1,DM3D-SF,Hirose,Card ejects right board edge @ Y=75mm
-U1,ESP32-S3-WROOM-1-N16R8,RF_Module:ESP32-S3-WROOM-1,1,ESP32-S3-WROOM-1-N16R8,Espressif,16MB flash 8MB PSRAM native USB
-U2,AMS1117-3.3,Package_TO_SOT_SMD:SOT-223-3_TabPin2,1,AMS1117-3.3,AMS,1A 3.3V LDO from USB 5V — headroom for 6 backlights + SD
+J7,USB-C receptacle,Connector_USB:USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal,1,USB4105-GF-A,GCT,Horizontal top-mount; port exits rear board edge @ X=29.75mm
+J8,microSD push-push,Connector_Card:microSD_HC_Hirose_DM3D-SF,1,DM3D-SF,Hirose,Card ejects right board edge; SPI mode on bus A
+J9,Qwiic / StemmaQT 4P,Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal,1,SM04B-SRSS-TB,JST,I2C expansion; exits rear wall next to USB
+J10,LRA motor 2P,Connector_JST:JST_SH_SM02B-SRSS-TB_1x02-1MP_P1.00mm_Horizontal,1,SM02B-SRSS-TB,JST,Haptic LRA (e.g. Vybronics VG0832013D) plugs in
+U1,ESP32-S3-WROOM-1-N16R8,RF_Module:ESP32-S3-WROOM-1,1,ESP32-S3-WROOM-1-N16R8,Espressif,16MB flash 8MB PSRAM native USB; dual SPI display driver
+U2,AMS1117-3.3,Package_TO_SOT_SMD:SOT-223-3_TabPin2,1,AMS1117-3.3,AMS,1A 3.3V LDO from USB 5V — headroom for 6 backlights + SD + sensors
+U3,USBLC6-2SC6,Package_TO_SOT_SMD:SOT-23-6,1,USBLC6-2SC6,ST,USB ESD protection on D+/D-/VBUS
+U4,LSM6DS3TR-C IMU,Package_LGA:LGA-14_3x2.5mm_P0.5mm_LayoutBorder3x4y,1,LSM6DS3TR-C,ST,6-axis accel+gyro; INT1 on IO9 for wake-on-pickup / tap
+U5,VEML7700 ambient light,OpenScreenDeck:VEML7700-TT,1,VEML7700-TT,Vishay,I2C ALS for auto backlight dimming; needs light window in enclosure front
+U6,DRV2605L haptic driver,Package_SO:MSOP-10_3x3mm_P0.5mm,1,DRV2605LDGSR,TI,LRA driver with effect library; EN on IO44
+U7,74AHCT1G125 level shifter,Package_TO_SOT_SMD:SOT-23-5,1,SN74AHCT1G125DBVR,TI,3.3V -> 5V LED data buffer for SK6812 chain
+D1-D8,SK6812MINI-E RGB LED,LED_SK6812MINI:LED_SK6812MINI_PLCC4_3.5x3.5mm_P1.75mm,8,SK6812MINI-E,OPSCO,Edge-glow chain: 2 rear + 6 side; 5V VBUS powered; data from U7
+BZ1,Piezo buzzer,Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT,1,CPT-9019S-SMT-TR,CUI,4kHz passive piezo; LEDC tone on IO43 via R10
 SW1,BOOT tactile C&K KMR2,Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2,1,KMR221GLFS,C&K,GPIO0 strap — hold for USB download mode
 SW2,RESET tactile C&K KMR2,Button_Switch_SMD:SW_Push_1P1T_NO_CK_KMR2,1,KMR221GLFS,C&K,EN to GND — tap while holding BOOT to enter bootloader
-U3,USBLC6-2SC6,Package_TO_SOT_SMD:SOT-23-6,1,USBLC6-2SC6,ST,USB ESD protection on D+/D-/VBUS
 C1-C6,100nF 0402,Capacitor_SMD:C_0402_1005Metric,6,,,Per ScreenKey VCC
 C7,10uF 0805,Capacitor_SMD:C_0805_2012Metric,1,,,LDO output bulk
 C8,10uF 0805,Capacitor_SMD:C_0805_2012Metric,1,,,LDO input
 C9-C11,100nF/1uF 0402,Capacitor_SMD:C_0402_1005Metric,3,,,ESP32 decoupling + EN RC
+C12,1uF 0402,Capacitor_SMD:C_0402_1005Metric,1,,,DRV2605L VREG
+C13-C15,100nF 0402,Capacitor_SMD:C_0402_1005Metric,3,,,IMU / ALS / haptic decoupling
+C16,100nF 0402,Capacitor_SMD:C_0402_1005Metric,1,,,Level shifter 5V decoupling
+C17,10uF 0805,Capacitor_SMD:C_0805_2012Metric,1,,,LED 5V rail bulk
 R1-R6,10k 0402,Resistor_SMD:R_0402_1005Metric,6,,,KEY line pull-ups
 R7-R8,5.1k 0402,Resistor_SMD:R_0402_1005Metric,2,,,USB-C CC1/CC2 pulldowns
 R9,10k 0402,Resistor_SMD:R_0402_1005Metric,1,,,EN pull-up
+R10,100R 0402,Resistor_SMD:R_0402_1005Metric,1,,,Piezo series resistor

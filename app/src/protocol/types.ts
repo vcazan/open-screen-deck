@@ -6,6 +6,8 @@ export interface InfoEvent {
   event: 'info';
   name: string;
   fw: string;
+  /** Protocol version (proto 13+) */
+  proto?: number;
   keys: number;
   /** Page support (v0.10+): number of pages and the currently shown page */
   pages?: number;
@@ -14,6 +16,35 @@ export interface InfoEvent {
   psram?: number;
   /** Deck orientation 0–3 (v0.9+): 0 portrait, 1 landscape CW, 2 flipped, 3 landscape CCW */
   orient?: number;
+  /** Rev E hardware (proto 14+): LED count and sensor presence */
+  leds?: number;
+  imu?: boolean;
+  als?: boolean;
+  haptic?: boolean;
+  /** Latest ambient light reading in lux (−1 while unavailable) */
+  lux?: number;
+  autodim?: boolean;
+  /** Current backlight PWM level 8..255 */
+  bright?: number;
+  /** Piezo on every key press (persisted; proto 14+) */
+  clickbeep?: boolean;
+}
+
+/** Emitted when the IMU wake interrupt fires — the deck was picked up (proto 14+). */
+export interface PickupEvent {
+  event: 'pickup';
+}
+
+/** SELFTEST result line (proto 14+). */
+export interface SelftestEvent {
+  event: 'selftest';
+  panels: number;
+  sd: boolean;
+  imu: boolean;
+  als: boolean;
+  lux: number;
+  haptic: boolean;
+  psram: number;
 }
 
 /** Emitted whenever the shown page changes (SET_PAGE or on-device key). */
@@ -107,6 +138,8 @@ export interface SdLsDoneEvent {
 
 export type DeviceEvent =
   | InfoEvent
+  | PickupEvent
+  | SelftestEvent
   | PageEvent
   | PagesEvent
   | KeyEvent
@@ -141,7 +174,17 @@ export type HostCommand =
   | { type: 'SD_RM'; path: string }
   | { type: 'SET_ORIENT'; orient: number }
   | { type: 'SET_PAGE'; page: number }
-  | { type: 'SET_PAGES'; pages: number };
+  | { type: 'SET_PAGES'; pages: number }
+  // Rev E hardware (proto 14+)
+  | { type: 'SET_LED'; index: number; r: number; g: number; b: number }
+  | { type: 'LED_CLEAR' }
+  | { type: 'SET_BRIGHT'; level: number }
+  | { type: 'AUTODIM'; on: boolean }
+  | { type: 'HAPTIC' }
+  | { type: 'BEEP'; freq?: number; ms?: number }
+  | { type: 'CLICK_BEEP'; on: boolean }
+  | { type: 'SELFTEST' }
+  | { type: 'FLASHING' };
 
 export interface SetKeyPayload {
   index: number;
@@ -154,6 +197,11 @@ export interface SetKeyPayload {
   bg?: number;
   /** Overlay flag: draw label/sublabel over SD media at render time (v0.8+) */
   ov?: number;
+  /**
+   * 1 = paint this slot now. Companion mode defaults to 0 on the device
+   * (batch profile sync); inspector edits must send 1 (v0.12.2+).
+   */
+  draw?: number;
   /** App-side glyph name; firmware ignores unknown fields */
   icon?: string;
 }

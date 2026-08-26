@@ -40,26 +40,51 @@ struct Progress<'a> {
     stage: String,
     total: usize,
     current: usize,
+    /// Overall 0..100 span for the current binary
+    span_lo: u32,
+    span_hi: u32,
+}
+
+fn stage_for_addr(addr: u32) -> (&'static str, u32, u32) {
+    match addr {
+        0x0 => ("Writing bootloader", 12, 22),
+        0x8000 => ("Writing partitions", 22, 28),
+        0xe000 => ("Writing boot stub", 28, 34),
+        0x10000 => ("Writing firmware", 34, 94),
+        _ => ("Writing firmware", 34, 94),
+    }
+}
+
+fn overall(lo: u32, hi: u32, current: usize, total: usize) -> u32 {
+    if total == 0 || hi <= lo {
+        return lo;
+    }
+    lo + (current as u32 * (hi - lo) / total as u32)
 }
 
 impl ProgressCallbacks for Progress<'_> {
     fn init(&mut self, addr: u32, total: usize) {
-        self.stage = format!("writing 0x{addr:x}");
+        let (stage, lo, hi) = stage_for_addr(addr);
+        self.stage = stage.to_string();
         self.total = total;
         self.current = 0;
-        emit(self.app, &self.stage, 0);
+        self.span_lo = lo;
+        self.span_hi = hi;
+        emit(self.app, stage, lo);
     }
     fn update(&mut self, current: usize) {
         self.current = current;
-        if self.total > 0 {
-            emit(self.app, &self.stage, (current * 100 / self.total) as u32);
-        }
+        emit(
+            self.app,
+            &self.stage,
+            overall(self.span_lo, self.span_hi, current, self.total),
+        );
     }
     fn verifying(&mut self) {
-        emit(self.app, "verifying", 100);
+        emit(self.app, "Verifying write", 96);
     }
     fn finish(&mut self, _skipped: bool) {
-        emit(self.app, &self.stage, 100);
+        emit(self.app, &self.stage, self.span_hi);
     }
 }
 
@@ -212,9 +237,12 @@ pub async fn flash_firmware(
     state: tauri::State<'_, crate::serial::SerialState>,
     port: String,
 ) -> Result<String, String> {
-    // Free the port — the flasher needs exclusive access
+    // Paint the keys while firmware is still running, then take the port.
+    emit(&app, "Preparing the deck", 2);
+    crate::serial::write_line_if_open(&state, "FLASHING");
+    std::thread::sleep(Duration::from_millis(450));
     crate::serial::close_port(&state);
-    emit(&app, "entering bootloader", 0);
+    emit(&app, "Rebooting into bootloader", 6);
 
     let bins = [
         (0x0u32, resource_bin(&app, "bootloader.bin")?),
@@ -226,7 +254,7 @@ pub async fn flash_firmware(
     let app2 = app.clone();
     let result = tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
         let boot_port_name = enter_bootloader(&port)?;
-        emit(&app2, "connecting", 0);
+        emit(&app2, "Talking to bootloader", 10);
 
         let ports = serialport::available_ports().map_err(|e| e.to_string())?;
         let usb_info = ports
@@ -267,12 +295,14 @@ pub async fn flash_firmware(
             stage: String::new(),
             total: 0,
             current: 0,
+            span_lo: 0,
+            span_hi: 100,
         };
         flasher
             .write_bins_to_flash(&segments, &mut progress)
             .map_err(|e| format!("flash write failed: {e}"))?;
 
-        emit(&app2, "restarting", 100);
+        emit(&app2, "Restarting the deck", 98);
         drop(flasher); // ResetAfterOperation::HardReset boots the firmware
         Ok("flashed".to_string())
     })

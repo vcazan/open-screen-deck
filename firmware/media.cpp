@@ -15,8 +15,27 @@ static uint32_t animLastMs = 0;
 
 bool ensureSdMounted() {
     if (sdOK) return true;
+    // A dead card makes SD.begin() block the loop for 1-2 s per probe.
+    // Never probe while the host is streaming (frames would overflow and
+    // corrupt the displays), and back off exponentially between attempts.
+    static uint32_t lastAttemptMs = 0;
+    static uint32_t backoffMs     = 5000;
+    if (Serial && Serial.available()) return false;
+    if (lastAttemptMs != 0 && (millis() - lastAttemptMs) < backoffMs) return false;
+    lastAttemptMs = millis();
+    if (backoffMs < 60000) backoffMs *= 2;
     SD.end();
-    sdOK = SD.begin(PIN_SD_CS, SPI, 20000000);
+    // A card wedged mid-write holds DAT0 busy and ignores init. Clock it
+    // with CS high until it releases before re-probing (fast: ~1 ms).
+    digitalWrite(PIN_SD_CS, HIGH);
+    SPI.beginTransaction(SPISettings(400000, MSBFIRST, SPI_MODE0));
+    for (int i = 0; i < 64; i++) SPI.transfer(0xFF);
+    SPI.endTransaction();
+    sdOK = SD.begin(PIN_SD_CS, SPI, 10000000);
+    if (sdOK) backoffMs = 5000;
+    if (Serial) {
+        Serial.printf("{\"event\":\"sd_mount\",\"ok\":%s}\n", sdOK ? "true" : "false");
+    }
     return sdOK;
 }
 
@@ -74,7 +93,7 @@ void serviceAnimation() {
     if (f && f.size() == FRAME_BYTES) {
         f.read((uint8_t*)frameBuf, FRAME_BYTES);
         f.close();
-        tfts[physOf(posOfSlot((uint8_t)animKey))]->drawRGBBitmap(0, 0, frameBuf, 128, 128);
+        blitFrame(tfts[physOf(posOfSlot((uint8_t)animKey))], frameBuf);
         if (keys[animKey].overlay) drawOverlayText((uint8_t)animKey);
     } else if (f) {
         f.close();

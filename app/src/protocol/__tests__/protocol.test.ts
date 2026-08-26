@@ -24,12 +24,24 @@ describe('codec', () => {
     expect(parseCommandLine(line)).toEqual({ type: 'PING' });
   });
 
+  it('round-trips FLASHING command', () => {
+    expect(encodeCommand({ type: 'FLASHING' })).toBe('FLASHING');
+    expect(parseCommandLine('FLASHING')).toEqual({ type: 'FLASHING' });
+  });
+
   it('round-trips SET_KEY command', () => {
     const payload = { index: 0, label: 'MUTE', sublabel: 'Mic', hid: 183, bg: 19017 };
     const line = encodeCommand({ type: 'SET_KEY', payload });
     expect(line).toBe('SET_KEY {"index":0,"label":"MUTE","sublabel":"Mic","hid":183,"bg":19017}');
     const parsed = parseCommandLine(line);
     expect(parsed).toEqual({ type: 'SET_KEY', payload });
+  });
+
+  it('includes SET_KEY draw:1 so companion-mode inspector edits paint immediately', () => {
+    const payload = { index: 2, label: 'CLIP', bg: 21609, draw: 1 };
+    const line = encodeCommand({ type: 'SET_KEY', payload });
+    expect(line).toContain('"draw":1');
+    expect(parseCommandLine(line)).toEqual({ type: 'SET_KEY', payload });
   });
 
   it('round-trips SET_IMAGE command', () => {
@@ -67,6 +79,46 @@ describe('codec', () => {
       type: 'SD_RM',
       path: '/osd/keys/0/icon.rgb565',
     });
+  });
+
+  it('round-trips Rev E LED and device commands', () => {
+    const led = { type: 'SET_LED' as const, index: -1, r: 255, g: 128, b: 0 };
+    const ledLine = encodeCommand(led);
+    expect(ledLine).toBe('SET_LED {"index":-1,"r":255,"g":128,"b":0}');
+    expect(parseCommandLine(ledLine)).toEqual(led);
+
+    expect(encodeCommand({ type: 'LED_CLEAR' })).toBe('LED_CLEAR');
+    expect(parseCommandLine('LED_CLEAR')).toEqual({ type: 'LED_CLEAR' });
+
+    expect(encodeCommand({ type: 'SET_BRIGHT', level: 180 })).toBe('SET_BRIGHT 180');
+    expect(parseCommandLine('SET_BRIGHT 180')).toEqual({ type: 'SET_BRIGHT', level: 180 });
+
+    expect(encodeCommand({ type: 'AUTODIM', on: false })).toBe('AUTODIM 0');
+    expect(parseCommandLine('AUTODIM 1')).toEqual({ type: 'AUTODIM', on: true });
+
+    expect(encodeCommand({ type: 'HAPTIC' })).toBe('HAPTIC');
+    expect(encodeCommand({ type: 'BEEP', freq: 2200, ms: 80 })).toBe('BEEP 2200 80');
+    expect(parseCommandLine('BEEP 2200 80')).toEqual({ type: 'BEEP', freq: 2200, ms: 80 });
+    expect(parseCommandLine('BEEP')).toEqual({ type: 'BEEP' });
+    expect(encodeCommand({ type: 'CLICK_BEEP', on: true })).toBe('CLICK_BEEP 1');
+    expect(parseCommandLine('CLICK_BEEP 0')).toEqual({ type: 'CLICK_BEEP', on: false });
+    expect(encodeCommand({ type: 'SELFTEST' })).toBe('SELFTEST');
+  });
+
+  it('parses Rev E info, pickup, and selftest events', () => {
+    const info = parseDeviceLine(
+      '{"event":"info","name":"Open Screen Deck","fw":"0.14.0","proto":14,"keys":6,' +
+        '"leds":8,"imu":true,"als":true,"haptic":true,"lux":240.5,"autodim":true,"bright":180,"clickbeep":false}',
+    );
+    expect(info).toMatchObject({ event: 'info', proto: 14, leds: 8, imu: true, bright: 180, clickbeep: false });
+
+    expect(parseDeviceLine('{"event":"pickup"}')).toEqual({ event: 'pickup' });
+
+    const st = parseDeviceLine(
+      '{"event":"selftest","panels":6,"sd":true,"imu":true,"als":true,"lux":240.0,' +
+        '"haptic":true,"psram":8388608}',
+    );
+    expect(st).toMatchObject({ event: 'selftest', panels: 6, haptic: true });
   });
 
   it('parses device events', () => {

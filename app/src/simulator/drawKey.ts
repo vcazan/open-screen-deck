@@ -98,16 +98,12 @@ export function drawKeyToCanvas(ctx: CanvasRenderingContext2D, config: KeyDrawCo
   ctx.textAlign = 'start';
 }
 
-/** Apply pressed visual — invert display briefly (firmware drawKeyPressed). */
+/** Brief press overlay — firmware no longer inverts the IPS panel. */
 export function drawKeyPressedEffect(ctx: CanvasRenderingContext2D): void {
-  const imageData = ctx.getImageData(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
-  const { data } = imageData;
-  for (let i = 0; i < data.length; i += 4) {
-    data[i] = 255 - data[i];
-    data[i + 1] = 255 - data[i + 1];
-    data[i + 2] = 255 - data[i + 2];
-  }
-  ctx.putImageData(imageData, 0, 0);
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+  ctx.restore();
 }
 
 /** Draw RGB565 framebuffer bytes onto canvas. */

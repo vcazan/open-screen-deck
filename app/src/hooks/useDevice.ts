@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { encodeCommand } from '../protocol/codec';
-import { FRAME_BYTES } from '../protocol/constants';
-import type { DeviceEvent } from '../protocol/types';
+import { FRAME_BYTES, KEY_COUNT } from '../protocol/constants';
+import type { DeviceEvent, SelftestEvent } from '../protocol/types';
 import { SimulatedDevice } from '../simulator/SimulatedDevice';
+import { dbgTrace } from '../utils/debugTrace';
 import { SimulatorTransport } from '../transport/SimulatorTransport';
 import { TauriSerialTransport, isTauri } from '../transport/TauriSerialTransport';
 import type { ConnectionState, Transport } from '../transport/types';
@@ -32,6 +33,8 @@ export interface DeviceContextValue {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   sendCommand: (line: string) => void;
+  /** Send and await the device ack — use for bulk syncs (RX flow control). */
+  sendCommandAcked: (line: string, ackSubstring: string) => Promise<void>;
   sendSetImage: (index: number, rgb565: Uint8Array) => Promise<void>;
   /** Draw-only frame (live tiles) — never touches the SD card. */
   sendSetFace: (index: number, rgb565: Uint8Array) => Promise<void>;
@@ -52,9 +55,17 @@ export interface DeviceContextValue {
   clearConsole: () => void;
   deviceInfo: DeviceEvent | null;
   refreshTick: number;
+  /** USB: true after GET_KEYS has filled the local mirror. */
+  keysMirrorReady: boolean;
   webSerialSupported: boolean;
   /** Register the action router — called with (slot, taps) on each resolved press. */
   setKeyPressHandler: (handler: ((index: number, taps: number) => void) | null) => void;
+  /** Register a pickup listener — fires when the deck's IMU reports motion (proto 14+). */
+  setPickupHandler: (handler: (() => void) | null) => void;
+  /** millis timestamp of the last pickup event (0 = never) — for UI pulses. */
+  lastPickupAt: number;
+  /** Most recent SELFTEST result, null until one runs. */
+  lastSelftest: SelftestEvent | null;
   /** Write an app-side note into the protocol console. */
   logLocal: (line: string) => void;
 }
@@ -80,9 +91,12 @@ export function useDeviceManager(): DeviceContextValue {
       web: isTauri() ? new TauriSerialTransport() : new WebSerialTransport(),
     };
   }
-  const simDeviceRef = { current: simStackRef.current.device };
-  const simTransportRef = { current: simStackRef.current.transport };
-  const webTransportRef = { current: simStackRef.current.web };
+  // Stable ref objects: fresh `{ current: ... }` literals on every render
+  // gave setupTransport a new identity each time, re-running the connect
+  // effect per render — which raced concurrent connect() calls at startup.
+  const simDeviceRef = useRef(simStackRef.current.device);
+  const simTransportRef = useRef(simStackRef.current.transport);
+  const webTransportRef = useRef(simStackRef.current.web);
 
   // The desktop companion exists to drive real hardware — default to USB there
   const [transportMode, setTransportModeState] = useState<TransportMode>(
@@ -93,6 +107,7 @@ export function useDeviceManager(): DeviceContextValue {
   const [selectedKey, setSelectedKey] = useState<number | null>(null);
   const [deviceInfo, setDeviceInfo] = useState<DeviceEvent | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [keysMirrorReady, setKeysMirrorReady] = useState(false);
 
   const transportRef = useRef<Transport>(simTransportRef.current);
   const pendingBinaryRef = useRef<Uint8Array | null>(null);
@@ -106,6 +121,14 @@ export function useDeviceManager(): DeviceContextValue {
   >([]);
   const sdLsCollectorRef = useRef<{ entries: SdEntry[] } | null>(null);
   const keyPressHandlerRef = useRef<((index: number, taps: number) => void) | null>(null);
+  const pickupHandlerRef = useRef<(() => void) | null>(null);
+  const [lastPickupAt, setLastPickupAt] = useState(0);
+  const [lastSelftest, setLastSelftest] = useState<SelftestEvent | null>(null);
+  const tickCountRef = useRef(0);
+  const expectedKeyStatesRef = useRef(0);
+  // Track received slot indexes (not a count) — duplicate or replayed
+  // key_state lines must not trip "ready" before every key has arrived.
+  const receivedKeyStatesRef = useRef<Set<number>>(new Set());
 
   /**
    * Protocol operation lock. Binary transfers (SET_IMAGE / SET_ANIM) span
@@ -175,16 +198,22 @@ export function useDeviceManager(): DeviceContextValue {
 
         const isError = line.includes('"event":"error"');
         const waiters = lineWaitersRef.current;
+        let matched = false;
         for (let i = waiters.length - 1; i >= 0; i--) {
           if (waiters[i].pred(line)) {
             clearTimeout(waiters[i].timer);
             waiters[i].resolve();
             waiters.splice(i, 1);
-          } else if (isError) {
-            clearTimeout(waiters[i].timer);
-            waiters[i].reject(new Error(line));
-            waiters.splice(i, 1);
+            matched = true;
           }
+        }
+        // An error line answers exactly ONE pending operation (the oldest).
+        // Rejecting every waiter let a single corrupted line abort unrelated
+        // transfers mid-frame — which is how icons landed on wrong slots.
+        if (isError && !matched && waiters.length > 0) {
+          const w = waiters.shift()!;
+          clearTimeout(w.timer);
+          w.reject(new Error(line));
         }
 
         try {
@@ -193,7 +222,13 @@ export function useDeviceManager(): DeviceContextValue {
             setDeviceInfo(ev);
             if (transportMode === 'webserial') {
               if (ev.orient !== undefined) simDeviceRef.current.mirrorOrientation(ev.orient);
-              if (ev.pages !== undefined) simDeviceRef.current.mirrorPages(ev.pages);
+              if (ev.pages !== undefined) {
+                simDeviceRef.current.mirrorPages(ev.pages);
+                expectedKeyStatesRef.current = ev.pages * KEY_COUNT;
+                receivedKeyStatesRef.current.clear();
+                setKeysMirrorReady(false);
+                dbgTrace(`sync: info pages=${ev.pages} expecting ${ev.pages * KEY_COUNT}`);
+              }
               if (ev.page !== undefined) simDeviceRef.current.mirrorPage(ev.page);
             }
           }
@@ -207,6 +242,13 @@ export function useDeviceManager(): DeviceContextValue {
           if (ev.event === 'key' && ev.action === 'press') {
             keyPressHandlerRef.current?.(ev.index, ev.taps ?? 1);
           }
+          if (ev.event === 'pickup') {
+            setLastPickupAt(Date.now());
+            pickupHandlerRef.current?.();
+          }
+          if (ev.event === 'selftest') {
+            setLastSelftest(ev);
+          }
           // USB: sync the local mirror from the device's reported key state
           if (ev.event === 'key_state' && transportMode === 'webserial') {
             simDeviceRef.current.mirrorKeyState(
@@ -219,6 +261,20 @@ export function useDeviceManager(): DeviceContextValue {
               ev.h2,
               ev.h3,
             );
+            receivedKeyStatesRef.current.add(ev.index);
+            const got = receivedKeyStatesRef.current.size;
+            if (
+              expectedKeyStatesRef.current > 0 &&
+              got >= expectedKeyStatesRef.current
+            ) {
+              // USB: profile sync sends one DRAW_ALL — skip a stale NVS preview.
+              if (transportMode !== 'webserial') {
+                simDeviceRef.current.redrawVisiblePage();
+              }
+              expectedKeyStatesRef.current = 0;
+              setKeysMirrorReady(true);
+              dbgTrace(`sync: mirror ready (${got} keys)`);
+            }
           }
         } catch {
           // Non-JSON line
@@ -227,13 +283,23 @@ export function useDeviceManager(): DeviceContextValue {
     });
 
     transport.onState((state) => {
+      dbgTrace(`sync: connection ${state}`);
       setConnectionState(state);
+      if (state === 'disconnected') {
+        setKeysMirrorReady(false);
+        expectedKeyStatesRef.current = 0;
+        receivedKeyStatesRef.current.clear();
+      }
     });
 
     // Always subscribe: in simulator mode this is the live device, in USB
     // mode it's the mirror of the physical deck — the on-screen canvases
     // must repaint for both.
     simDeviceRef.current.onState(() => {
+      tickCountRef.current += 1;
+      if (tickCountRef.current <= 5 || tickCountRef.current % 50 === 0) {
+        dbgTrace(`sync: refreshTick #${tickCountRef.current}`);
+      }
       setRefreshTick((t) => t + 1);
     });
   }, [addConsoleEntry, transportMode, simDeviceRef]);
@@ -290,7 +356,12 @@ export function useDeviceManager(): DeviceContextValue {
    */
   const mirrorLine = useCallback(
     (line: string) => {
-      if (transportMode === 'webserial') simDeviceRef.current.mirrorLine(line);
+      if (transportMode === 'webserial') {
+        if (line.startsWith('DRAW') || line.startsWith('SET_PAGE')) {
+          dbgTrace(`sync: mirroring ${line.slice(0, 40)}`);
+        }
+        simDeviceRef.current.mirrorLine(line);
+      }
     },
     [transportMode, simDeviceRef],
   );
@@ -310,6 +381,22 @@ export function useDeviceManager(): DeviceContextValue {
       });
     },
     [withLock, mirrorLine],
+  );
+
+  /**
+   * Send a command and wait for its device ack before returning. Paces
+   * bulk syncs (e.g. 48 SET_KEYs) to the firmware's processing speed so
+   * the CDC RX buffer can't overflow and corrupt the stream.
+   */
+  const sendCommandAcked = useCallback(
+    (line: string, ackSubstring: string): Promise<void> =>
+      withLock(async () => {
+        const done = expectLine((l) => l.includes(ackSubstring), 5000);
+        transportRef.current.sendLine(line);
+        mirrorLine(line);
+        await done;
+      }),
+    [withLock, expectLine, mirrorLine],
   );
 
   const sendSetImage = useCallback(
@@ -471,6 +558,10 @@ export function useDeviceManager(): DeviceContextValue {
     [],
   );
 
+  const setPickupHandler = useCallback((handler: (() => void) | null) => {
+    pickupHandlerRef.current = handler;
+  }, []);
+
   const logLocal = useCallback(
     (line: string) => {
       addConsoleEntry(line, 'tx');
@@ -489,6 +580,7 @@ export function useDeviceManager(): DeviceContextValue {
     connect,
     disconnect,
     sendCommand,
+    sendCommandAcked,
     sendSetImage,
     sendSetFace,
     sendAnimation,
@@ -503,8 +595,12 @@ export function useDeviceManager(): DeviceContextValue {
     clearConsole,
     deviceInfo,
     refreshTick,
+    keysMirrorReady,
     webSerialSupported: webTransportRef.current.isWebSerialSupported(),
     setKeyPressHandler,
+    setPickupHandler,
+    lastPickupAt,
+    lastSelftest,
     logLocal,
   };
 }

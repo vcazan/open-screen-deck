@@ -30,8 +30,9 @@ modules).
 | | |
 |--|--|
 | **Keys** | 6× Waveshare 0.85″ ScreenKey (SKU 34168) — LCD + mechanical switch in one |
-| **Brain** | ESP32-S3-WROOM-1 (16 MB flash, 8 MB PSRAM) on a custom 55×112 mm carrier |
-| **Case** | 59.7 × 116.7 × 28.2 mm printed deck + optional 25° stand, 4 corner screws |
+| **Brain** | ESP32-S3-WROOM-1 (16 MB flash, 8 MB PSRAM) on a custom **59.5 × 108.5 mm** Rev E carrier |
+| **Senses** | IMU (pickup), ambient light (auto-dim), haptics, 8× edge-glow LEDs, Qwiic |
+| **Case** | 64.9 × 113.9 × 28.2 mm printed deck + optional 25° stand, 4 corner screws |
 
 1. Order 6× Waveshare 34168 (~$66) and the PCB
    (`hardware/pcb/data_streamdeck_gerbers.zip` → JLCPCB, ~$15 for five)
@@ -44,8 +45,9 @@ modules).
 
 USB HID keyboard (F13–F24) + a JSON serial protocol for everything else:
 per-key labels/colors/images, GIF/video animations from microSD, up to
-**8 pages** (48 keys) switched on-device, and single/double/triple-press
-actions with smart latency. Flash from the Arduino IDE
+**8 pages** (48 keys) switched on-device, multi-tap, dual-SPI display
+drive, and Rev E hardware (auto-dim, glow LEDs, haptics). Flash from the
+Arduino IDE
 ([guide](https://vcazan.github.io/open-screen-deck/firmware/flashing/)) —
 or let the companion app flash the bundled firmware in one click.
 
@@ -72,7 +74,9 @@ A Tauri (Rust + React) companion for macOS/Windows:
 </p>
 
 - **In-app firmware updates** — flash the bundled firmware over USB, with
-  bootloader recovery
+  a live progress overlay and bootloader recovery
+- **Deck hardware** — auto-dim, glow colour, haptic click, and a
+  self-test for IMU / ALS / LEDs (Rev E)
 
 [Full app tour](https://vcazan.github.io/open-screen-deck/app/) ·
 [Releases](https://github.com/vcazan/open-screen-deck/releases)
@@ -95,10 +99,11 @@ and [`plugins/README.md`](plugins/README.md).
 
 ```
 hardware/
+  pinout.py          Canonical GPIO + Rev E geometry (generators + firmware)
   pcb/               KiCad project, Gerbers, PCB BOM
-  enclosure/         OpenSCAD sources + printable STLs
-  3d/                Fastener STEP models used in the CAD assembly
-firmware/            ESP32-S3 Arduino firmware (HID + CDC + SD + pages + animations)
+  enclosure/         OpenSCAD v14 sources + printable STLs
+  3d/                Fastener + assembly STEP models
+firmware/            ESP32-S3 Arduino (HID + CDC + dual SPI + sensors + LEDs)
 app/                 Tauri companion app (Rust backend, React front end)
 plugins/             Bundled plugins + registry.json (the store's index)
 profiles/            Community profile gallery (.osdprofile.json)

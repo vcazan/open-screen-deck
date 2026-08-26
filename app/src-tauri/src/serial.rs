@@ -195,3 +195,12 @@ pub fn close_port(state: &tauri::State<'_, SerialState>) {
     // Give the reader thread a beat to drop its handle
     std::thread::sleep(Duration::from_millis(300));
 }
+
+/// Best-effort write while the CDC port is still owned (pre-flash banner).
+pub fn write_line_if_open(state: &tauri::State<'_, SerialState>, line: &str) {
+    let mut guard = state.inner.lock().unwrap();
+    if let Some(conn) = guard.as_mut() {
+        let _ = conn.writer.write_all(format!("{line}\n").as_bytes());
+        let _ = conn.writer.flush();
+    }
+}

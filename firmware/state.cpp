@@ -60,6 +60,31 @@ void loadConfig() {
     prefs.end();
 }
 
+static uint64_t configDirty = 0;
+
+void markConfigDirty(uint8_t idx) {
+    if (idx < TOTAL_KEYS) configDirty |= (1ULL << idx);
+}
+
+bool configIsDirty() {
+    return configDirty != 0;
+}
+
+bool flushOneConfigDirty() {
+    if (!configDirty) return false;
+    for (uint8_t i = 0; i < TOTAL_KEYS; i++) {
+        if (configDirty & (1ULL << i)) {
+            saveConfig(i);
+            return configDirty != 0;
+        }
+    }
+    return false;
+}
+
+void flushConfigDirty() {
+    while (flushOneConfigDirty()) {}
+}
+
 void saveConfig(uint8_t idx) {
     prefs.begin("osd", false);
     char k[8];
@@ -78,4 +103,5 @@ void saveConfig(uint8_t idx) {
     snprintf(k, sizeof(k), "o%u", idx);
     prefs.putUChar(k, keys[idx].overlay);
     prefs.end();
+    configDirty &= ~(1ULL << idx);
 }

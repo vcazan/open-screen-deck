@@ -84,6 +84,11 @@ export interface PluginContext {
    */
   paintFace: (canvas: HTMLCanvasElement) => Promise<void>;
   /**
+   * Chirp the deck's piezo. Use for timer done / async results — not
+   * every key press (that's the user's Beep on key press setting).
+   */
+  beep: (freq?: number, ms?: number) => void;
+  /**
    * Set a persistent branded face (SET_IMAGE): survives reboots and shows
    * standalone. Use in onAssign; stream live updates over it with paintFace.
    */
@@ -114,6 +119,8 @@ interface HostBridge {
   sendFace: (slot: number, rgb565: Uint8Array) => Promise<void>;
   /** Persist an RGB565 frame as the key's image (SET_IMAGE) */
   sendImage: (slot: number, rgb565: Uint8Array) => Promise<void>;
+  /** Chirp the deck piezo (BEEP). */
+  beep: (freq: number, ms: number) => void;
   /** Request over the app's obs-websocket connection */
   obsRequest: (requestType: string, requestData?: Record<string, unknown>) => Promise<unknown>;
   /** Reconfigure the app's shared obs-websocket connection */
@@ -291,12 +298,14 @@ class PluginHost {
     setKeyFace: () => {},
     sendFace: async () => {},
     sendImage: async () => {},
+    beep: () => {},
     obsRequest: async () => {
       throw new Error('OBS bridge not connected');
     },
     obsConfigure: async () => {},
   };
   private loaded = false;
+  private loadPromise: Promise<void> | null = null;
   private installed: InstalledPlugin[] = [];
   /** Cleanup callbacks per plugin — run on reload/uninstall (timers, audio) */
   private disposers = new Map<string, (() => void)[]>();
@@ -329,17 +338,29 @@ class PluginHost {
     const log = (m: string) => this.bridge.log(`[${pluginId}] ${m}`);
     return {
       log,
-      setKeyFace: (s, face) => this.bridge.setKeyFace(s, face),
+      setKeyFace: (s, face) => {
+        const target = typeof s === 'number' ? s : slot;
+        const f = typeof s === 'number' ? face : s;
+        log(`setKeyFace → slot ${target} ${JSON.stringify(f)}`);
+        this.bridge.setKeyFace(target, f as { label?: string; sublabel?: string; bg?: number });
+      },
       shell: (command) => runHostAction({ type: 'shell', command }, log),
       hotkey: (keys) => runHostAction({ type: 'hotkey', keys }, log),
       fetch: pluginFetch,
       paintFace: async (canvas) => {
+        log(`paintFace → slot ${slot}`);
         const { canvasToRgb565Alpha } = await import('../protocol/rgb565');
         await this.bridge.sendFace(slot, canvasToRgb565Alpha(canvas));
       },
       setKeyImage: async (canvas) => {
+        log(`setKeyImage → slot ${slot}`);
         const { canvasToRgb565Alpha } = await import('../protocol/rgb565');
         await this.bridge.sendImage(slot, canvasToRgb565Alpha(canvas));
+      },
+      beep: (freq = 2000, ms = 80) => {
+        const f = Math.max(100, Math.min(12000, freq));
+        const d = Math.max(5, Math.min(2000, ms));
+        this.bridge.beep(f, d);
       },
       obs: (requestType, requestData) => this.bridge.obsRequest(requestType, requestData),
       slot,
@@ -369,6 +390,7 @@ class PluginHost {
       setKeyImage: async (canvas) => {
         captured = canvas.toDataURL();
       },
+      beep: () => {},
     };
     await action.onAssign(settings ?? getActionDefaults(actionId), ctx);
     return captured;
@@ -391,6 +413,7 @@ class PluginHost {
   }
 
   async execute(id: string, settings: Record<string, string>, slot: number): Promise<void> {
+    await this.whenLoaded();
     const action = this.actions.get(id);
     if (!action) {
       this.bridge.log(`plugin action ${id} is not installed`);
@@ -408,6 +431,10 @@ class PluginHost {
    * plugin takes ownership of the face via its onAssign hook.
    */
   async notifyAssigned(id: string, settings: Record<string, string>, slot: number): Promise<void> {
+    // On a fresh launch the profile sync can fire before loadAll() has
+    // registered the plugins — waiting here keeps plugin faces from
+    // silently never painting until the key is next pressed.
+    await this.whenLoaded();
     const action = this.actions.get(id);
     if (!action?.onAssign) return;
     try {
@@ -417,10 +444,20 @@ class PluginHost {
     }
   }
 
+  /** Resolves once the initial loadAll() pass has finished (or never started). */
+  private async whenLoaded(): Promise<void> {
+    if (this.loadPromise) await this.loadPromise;
+  }
+
   /** Load every plugin from the app data dir (idempotent). */
   async loadAll(): Promise<void> {
-    if (this.loaded || !isTauri()) return;
+    if (this.loaded || !isTauri()) return this.loadPromise ?? undefined;
     this.loaded = true;
+    this.loadPromise = this.loadAllInner();
+    return this.loadPromise;
+  }
+
+  private async loadAllInner(): Promise<void> {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       const plugins = (await invoke('plugins_list')) as {

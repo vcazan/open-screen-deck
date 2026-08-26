@@ -78,6 +78,7 @@ export function activate(api) {
         brandFace((g) => houseGlyph(g, ok ? '#2fd47c' : '#e05252'),
           settings.name || settings.id, ok ? 'sent' : `http ${res.status}`, ok ? '#2fd47c' : '#e05252'),
       );
+      ctx.beep(ok ? 1760 : 280, ok ? 60 : 140);
       setTimeout(() => {
         ctx.paintFace(
           brandFace(houseGlyph, settings.name || settings.id, 'home assistant', '#41bdf5'),

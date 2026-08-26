@@ -100,7 +100,7 @@ def main() -> None:
             for ang in range(0, 360, 15):
                 vx = x + r * math.cos(math.radians(ang))
                 vy = y + r * math.sin(math.radians(ang))
-                if 1.0 < vx < 54.0 and 1.0 < vy < 111.0 and clear_at(vx, vy, 0.55) and stub_clear(x, y, vx, vy):
+                if 1.0 < vx < 58.5 and 1.0 < vy < 107.5 and clear_at(vx, vy, 0.55) and stub_clear(x, y, vx, vy):
                     spot = (vx, vy)
                     break
             if spot:

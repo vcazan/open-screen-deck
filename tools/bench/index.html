@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Open Screen Deck — Bench Tester</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ── Lab-instrument theme ─────────────────────────────────── */
+  :root {
+    --bg: #0b0e11;
+    --panel: #12161b;
+    --panel-2: #171c22;
+    --line: #232a33;
+    --text: #d7dde3;
+    --dim: #7c8791;
+    --faint: #4a545e;
+    --accent: #3ddc84;          /* phosphor green */
+    --accent-dim: #1d5c3c;
+    --amber: #ffb454;
+    --red: #ff5d5d;
+    --blue: #58a6ff;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.45 -apple-system, "Segoe UI", Inter, sans-serif;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ───────────────────────────────────────────────── */
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+  header h1 span { color: var(--accent); }
+  .dev-id {
+    font-family: var(--mono); font-size: 11.5px; color: var(--dim);
+    opacity: 0; transform: translateX(-6px);
+    transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+  }
+  .dev-id.show { opacity: 1; transform: none; }
+  .spacer { flex: 1; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--faint); transition: background 0.3s, box-shadow 0.3s;
+  }
+  .status-dot.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  button {
+    font: inherit; color: var(--text); cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 14px;
+    transition: border-color 0.15s cubic-bezier(0.2,0,0,1),
+                background 0.15s cubic-bezier(0.2,0,0,1),
+                transform 0.12s cubic-bezier(0.2,0,0,1);
+  }
+  button:hover { border-color: var(--accent-dim); background: #1b222a; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: default; transform: none; }
+  button.primary {
+    background: var(--accent); color: #06130c; border-color: var(--accent);
+    font-weight: 600;
+  }
+  button.primary:hover { background: #55e698; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Empty / connect state ────────────────────────────────── */
+  #emptyState {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    transition: opacity 0.3s var(--ease);
+  }
+  #emptyState .board-art {
+    width: 120px; height: 210px; border: 2px solid var(--line);
+    border-radius: 14px; position: relative;
+    animation: float 3.2s ease-in-out infinite;
+  }
+  #emptyState .board-art::before {
+    content: ""; position: absolute; inset: 16px 16px auto 16px; height: 44px;
+    border-radius: 6px; background: var(--accent-dim); opacity: 0.5;
+  }
+  #emptyState .board-art::after {
+    content: ""; position: absolute; inset: 74px 16px auto 16px; height: 44px;
+    border-radius: 6px; background: var(--accent-dim); opacity: 0.3;
+  }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+  #emptyState p { color: var(--dim); max-width: 360px; text-align: center; }
+  #emptyState .hint { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 500; }
+  #emptyState .hint svg { animation: nudge 1.5s ease-in-out infinite; }
+  @keyframes nudge { 0%,100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+  #unsupported { color: var(--amber); display: none; }
+
+  /* ── Main grid ────────────────────────────────────────────── */
+  #main {
+    flex: 1; display: none; overflow: auto;
+    padding: 16px; gap: 16px;
+    grid-template-columns: 1.35fr 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+  #main.show { display: grid; animation: fadeUp 0.45s var(--ease); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    min-width: 0;
+  }
+  .panel h2 {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--dim);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel h2 .tag {
+    margin-left: auto; font-family: var(--mono); font-size: 10.5px;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  /* ── Lux chart ────────────────────────────────────────────── */
+  #luxWrap { grid-column: 1; grid-row: 1; }
+  .lux-read { display: flex; align-items: baseline; gap: 10px; }
+  #luxVal {
+    font-family: var(--mono); font-size: 40px; font-weight: 500;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 18px rgba(61,220,132,0.35);
+  }
+  .lux-read .unit { color: var(--dim); font-size: 14px; }
+  #luxChart { width: 100%; height: 120px; border-radius: 8px; background: #0d1114; }
+  .sub-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; color: var(--dim);
+    border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+    transition: color 0.3s, border-color 0.3s;
+  }
+  .chip.hot { color: var(--accent); border-color: var(--accent-dim); }
+
+  /* ── IMU panel ────────────────────────────────────────────── */
+  #imuWrap { grid-column: 2; grid-row: 1; align-items: center; }
+  #imuTarget {
+    position: relative; width: 108px; height: 108px; margin: 8px auto 2px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #imuCore {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--faint); transition: background 0.4s, box-shadow 0.4s;
+  }
+  #imuCore.armed { background: var(--accent-dim); }
+  #imuCore.fired { background: var(--accent); box-shadow: 0 0 26px var(--accent); }
+  .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--accent); opacity: 0; pointer-events: none;
+  }
+  .ring.go { animation: ripple 0.9s var(--ease) forwards; }
+  @keyframes ripple {
+    0% { transform: scale(0.24); opacity: 0.9; }
+    100% { transform: scale(1.15); opacity: 0; }
+  }
+  #imuMsg { color: var(--dim); font-size: 12.5px; text-align: center; min-height: 34px; }
+  #imuCount { font-family: var(--mono); color: var(--text); }
+
+  /* ── Brightness / display panel ───────────────────────────── */
+  #brightWrap { grid-column: 3; grid-row: 1; }
+  .gauge { display: flex; align-items: center; gap: 10px; }
+  .gauge input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .gauge .val { font-family: var(--mono); width: 40px; text-align: right; color: var(--accent); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .switch { position: relative; width: 40px; height: 22px; cursor: pointer; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-ui {
+    position: absolute; inset: 0; border-radius: 999px;
+    background: var(--line); transition: background 0.25s var(--ease);
+  }
+  .slider-ui::before {
+    content: ""; position: absolute; left: 3px; top: 3px;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--dim);
+    transition: transform 0.25s var(--ease), background 0.25s;
+  }
+  .switch input:checked + .slider-ui { background: var(--accent-dim); }
+  .switch input:checked + .slider-ui::before { transform: translateX(18px); background: var(--accent); }
+
+  /* ── Actuators ────────────────────────────────────────────── */
+  #actWrap { grid-column: 1; grid-row: 2; }
+  .act-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .act-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 9px; }
+  .act-box h3 { font-size: 12px; color: var(--dim); font-weight: 600; }
+  .beep-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .beep-presets button { padding: 4px 10px; font-size: 12px; font-family: var(--mono); border-radius: 999px; }
+  #hapticBtn {
+    font-size: 15px; padding: 14px; border-radius: 10px; font-weight: 600;
+    background: var(--panel); position: relative; overflow: hidden;
+  }
+  #hapticBtn.buzz { animation: shake 0.3s linear; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-3px); } 40% { transform: translateX(3px); }
+    60% { transform: translateX(-2px); } 80% { transform: translateX(2px); }
+  }
+
+  /* LED board mimic */
+  #ledBoard {
+    position: relative; width: 122px; height: 208px; margin: 0 auto;
+    border: 1.5px solid var(--line); border-radius: 12px;
+  }
+  .led {
+    position: absolute; width: 16px; height: 16px; border-radius: 5px;
+    background: #20262d; border: 1px solid var(--line); cursor: pointer;
+    transition: box-shadow 0.3s var(--ease), background 0.3s var(--ease), transform 0.12s;
+  }
+  .led:hover { transform: scale(1.18); }
+  .led-label {
+    position: absolute; font-family: var(--mono); font-size: 8.5px; color: var(--faint);
+    pointer-events: none;
+  }
+  .led-tools { display: flex; align-items: center; gap: 8px; justify-content: center; }
+  #ledColor { width: 34px; height: 28px; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; padding: 2px; }
+
+  /* ── Keys ─────────────────────────────────────────────────── */
+  #keysWrap { grid-column: 2; grid-row: 2; }
+  #keyGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
+  .key-tile {
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--panel-2); min-height: 52px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    transition: background 0.25s var(--ease), border-color 0.25s var(--ease),
+                box-shadow 0.25s var(--ease), transform 0.12s cubic-bezier(0.2,0,0,1);
+  }
+  .key-tile .kn { font-family: var(--mono); font-size: 13px; color: var(--dim); }
+  .key-tile .taps { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .key-tile.down {
+    background: var(--accent-dim); border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(61,220,132,0.25); transform: scale(0.96);
+  }
+  .key-tile.down .kn { color: var(--accent); }
+
+  /* ── System / selftest ────────────────────────────────────── */
+  #sysWrap { grid-column: 3; grid-row: 2; }
+  #stList { display: flex; flex-direction: column; gap: 5px; }
+  .st-item {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; color: var(--dim);
+    opacity: 0; transform: translateX(-8px);
+  }
+  .st-item.in { animation: stIn 0.35s var(--ease) forwards; }
+  @keyframes stIn { to { opacity: 1; transform: none; } }
+  .st-item .mark { width: 14px; text-align: center; }
+  .st-item.pass .mark { color: var(--accent); }
+  .st-item.fail .mark { color: var(--amber); }
+  .sys-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── Console ──────────────────────────────────────────────── */
+  #consoleWrap {
+    border-top: 1px solid var(--line); background: var(--panel);
+    flex-shrink: 0; display: none; flex-direction: column;
+    height: 34px; transition: height 0.35s var(--ease);
+  }
+  #consoleWrap.show { display: flex; }
+  #consoleWrap.open { height: 220px; }
+  #consoleBar {
+    display: flex; align-items: center; gap: 10px; padding: 0 16px;
+    height: 34px; cursor: pointer; user-select: none; flex-shrink: 0;
+  }
+  #consoleBar .title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  #consoleBar .chev { transition: transform 0.35s var(--ease); color: var(--dim); }
+  #consoleWrap.open .chev { transform: rotate(180deg); }
+  #consoleBar .last-line {
+    font-family: var(--mono); font-size: 11px; color: var(--faint);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+  }
+  #log {
+    flex: 1; overflow-y: auto; padding: 4px 16px;
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.6;
+  }
+  #log .tx { color: var(--blue); }
+  #log .rx { color: var(--dim); }
+  #log .ev { color: var(--accent); }
+  #log .err { color: var(--red); }
+  #cmdRow { display: flex; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--line); }
+  #cmdInput {
+    flex: 1; font-family: var(--mono); font-size: 12px; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 7px; padding: 6px 10px; outline: none;
+  }
+  #cmdInput:focus { border-color: var(--accent-dim); }
+
+  @media (max-width: 1100px) {
+    #main { grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+    #luxWrap, #actWrap { grid-column: span 2; }
+    #imuWrap, #brightWrap, #keysWrap, #sysWrap { grid-column: auto; grid-row: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>OPEN SCREEN DECK <span>· BENCH</span></h1>
+  <div class="dev-id" id="devId"></div>
+  <div class="spacer"></div>
+  <div class="status-dot" id="statusDot"></div>
+  <button id="connectBtn" class="primary">Connect Board</button>
+</header>
+
+<div id="emptyState">
+  <div class="board-art"></div>
+  <p>Plug a deck into USB, then connect. Every Rev&nbsp;E subsystem — sensors,
+     LEDs, haptics, piezo, keys — becomes live and testable.</p>
+  <div class="hint">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 8h10m0 0L8 4m4 4l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Click “Connect Board” to begin
+  </div>
+  <p id="unsupported">This browser has no Web Serial — use Chrome or Edge.</p>
+</div>
+
+<div id="main">
+  <!-- Ambient light -->
+  <section class="panel" id="luxWrap">
+    <h2>Ambient Light — VEML7700 <span class="tag chip" id="alsChip">—</span></h2>
+    <div class="lux-read"><span id="luxVal">—</span><span class="unit">lux</span></div>
+    <canvas id="luxChart"></canvas>
+    <div class="sub-row">
+      <span class="chip" id="luxMin">min —</span>
+      <span class="chip" id="luxMax">max —</span>
+      <span class="chip">cover the sensor with a finger to test</span>
+    </div>
+  </section>
+
+  <!-- IMU -->
+  <section class="panel" id="imuWrap">
+    <h2 style="align-self:stretch">Motion — LSM6DS3 <span class="tag chip" id="imuChip">—</span></h2>
+    <div id="imuTarget"><div class="ring" id="ring1"></div><div class="ring" id="ring2"></div><div id="imuCore"></div></div>
+    <div id="imuMsg">Pick the board up or give it a shake —<br>pickup events land here.</div>
+    <div class="chip">pickups <span id="imuCount">0</span></div>
+  </section>
+
+  <!-- Backlight -->
+  <section class="panel" id="brightWrap">
+    <h2>Backlight &amp; Auto-dim</h2>
+    <div class="gauge">
+      <input type="range" id="brightSlider" min="0" max="255" value="128">
+      <span class="val" id="brightVal">—</span>
+    </div>
+    <div class="toggle-row">
+      <span style="color:var(--dim)">Auto-dim from light sensor</span>
+      <label class="switch"><input type="checkbox" id="autodimToggle"><span class="slider-ui"></span></label>
+    </div>
+    <p style="color:var(--faint);font-size:12px">Moving the slider takes manual control; the
+    toggle hands it back to the sensor.</p>
+  </section>
+
+  <!-- Actuators -->
+  <section class="panel" id="actWrap">
+    <h2>Actuators</h2>
+    <div class="act-grid">
+      <div class="act-box">
+        <h3>Piezo buzzer</h3>
+        <div class="beep-presets">
+          <button data-f="440" data-ms="150">440</button>
+          <button data-f="880" data-ms="150">880</button>
+          <button data-f="2000" data-ms="120">2k</button>
+          <button data-f="4000" data-ms="100">4k</button>
+          <button id="beepSweep">sweep</button>
+        </div>
+        <div class="gauge">
+          <input type="range" id="beepFreq" min="100" max="8000" value="1000" step="10">
+          <span class="val" id="beepFreqVal">1000</span>
+        </div>
+        <button id="beepBtn">Beep</button>
+      </div>
+      <div class="act-box">
+        <h3>Haptic — DRV2605L <span class="tag chip" id="hapChip" style="font-size:10px">—</span></h3>
+        <button id="hapticBtn">Pulse</button>
+        <p style="color:var(--faint);font-size:11.5px">Needs the LRA motor on J10 to feel
+        anything; the driver ack is shown regardless.</p>
+      </div>
+      <div class="act-box" style="grid-column: span 2">
+        <h3>RGB LEDs — SK6812 chain <span class="tag chip" style="font-size:10px">click a pad</span></h3>
+        <div style="display:flex; gap:18px; align-items:center; justify-content:center">
+          <div id="ledBoard"></div>
+          <div style="display:flex; flex-direction:column; gap:9px">
+            <div class="led-tools"><input type="color" id="ledColor" value="#3ddc84"><span style="color:var(--dim);font-size:12px">paint color</span></div>
+            <button id="ledAll">Light all</button>
+            <button id="ledChase">Chase test</button>
+            <button id="ledClear" class="danger">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Keys -->
+  <section class="panel" id="keysWrap">
+    <h2>Keys</h2>
+    <div id="keyGrid"></div>
+    <p style="color:var(--faint);font-size:12px">Press physical keys — tiles light on
+    press, release, and show tap counts.</p>
+  </section>
+
+  <!-- System -->
+  <section class="panel" id="sysWrap">
+    <h2>System</h2>
+    <div class="sys-btns">
+      <button id="selftestBtn" class="primary">Run Selftest</button>
+      <button id="sdBtn">SD Info</button>
+      <button id="reinitBtn">Reinit Panels</button>
+    </div>
+    <div id="stList"></div>
+  </section>
+</div>
+
+<div id="consoleWrap">
+  <div id="consoleBar">
+    <span class="title">Console</span>
+    <span class="last-line" id="lastLine"></span>
+    <svg class="chev" width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div id="log"></div>
+  <div id="cmdRow">
+    <input id="cmdInput" placeholder="raw command… e.g. BEEP 1500 200" spellcheck="false">
+    <button id="cmdSend">Send</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ── Serial plumbing ─────────────────────────────────────────── */
+let port = null, writer = null, readLoopActive = false;
+
+async function connect() {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    // DTR high = "terminal attached" for the ESP32-S3 CDC; never toggle RTS
+    // afterwards (specific DTR/RTS sequences drop the chip into bootloader).
+    await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+    writer = port.writable.getWriter();
+    onConnected();
+    readLoop();
+  } catch (e) {
+    if (e.name !== "NotFoundError") logLine("err", "connect failed: " + e.message);
+  }
+}
+
+async function disconnect(silent) {
+  readLoopActive = false;
+  try { writer && writer.releaseLock(); } catch (_) {}
+  try { port && await port.close(); } catch (_) {}
+  port = null; writer = null;
+  onDisconnected(silent);
+}
+
+async function send(cmd) {
+  if (!writer) return;
+  logLine("tx", cmd);
+  try {
+    await writer.write(new TextEncoder().encode(cmd + "\n"));
+  } catch (e) {
+    logLine("err", "write failed: " + e.message);
+  }
+}
+
+async function readLoop() {
+  readLoopActive = true;
+  let buf = "";
+  const decoder = new TextDecoder();
+  while (readLoopActive && port && port.readable) {
+    const reader = port.readable.getReader();
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim();
+          buf = buf.slice(i + 1);
+          if (line) handleLine(line);
+        }
+      }
+    } catch (e) {
+      logLine("err", "read error: " + e.message);
+      break;
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  if (readLoopActive) disconnect();   // cable yanked
+}
+
+navigator.serial && navigator.serial.addEventListener("disconnect", () => port && disconnect());
+
+/* ── Protocol events ─────────────────────────────────────────── */
+let infoTimer = null, luxData = [], luxMin = Infinity, luxMax = -Infinity;
+let pickupCount = 0, selftestPending = false;
+
+function handleLine(line) {
+  let j = null;
+  try { j = JSON.parse(line); } catch (_) {}
+  logLine(j && j.event === "dbg" ? "rx" : (j ? "ev" : "rx"), line);
+  if (!j) return;
+  switch (j.event) {
+    case "info":      onInfo(j); break;
+    case "pickup":    onPickup(); break;
+    case "key":       onKey(j); break;
+    case "selftest":  onSelftest(j); break;
+    case "sd":        onSdInfo(j); break;
+    case "ok":
+      if (j.cmd === "SET_BRIGHT") setBrightUI(j.bright);
+      if (j.cmd === "AUTODIM") $("autodimToggle").checked = !!j.on;
+      if (j.cmd === "HAPTIC") $("hapChip").textContent = j.present ? "present" : "no driver!";
+      break;
+    case "error":     logLine("err", line); break;
+  }
+}
+
+function onConnected() {
+  $("statusDot").classList.add("on");
+  $("connectBtn").textContent = "Disconnect";
+  $("connectBtn").classList.remove("primary");
+  $("emptyState").style.display = "none";
+  $("main").classList.add("show");
+  $("consoleWrap").classList.add("show");
+  send("INFO");
+  infoTimer = setInterval(() => send("INFO"), 1200);
+}
+
+function onDisconnected(silent) {
+  clearInterval(infoTimer);
+  $("statusDot").classList.remove("on");
+  $("connectBtn").textContent = "Connect Board";
+  $("connectBtn").classList.add("primary");
+  $("devId").classList.remove("show");
+  if (!silent) logLine("err", "— disconnected —");
+}
+
+/* ── Panels: info / lux ──────────────────────────────────────── */
+function onInfo(j) {
+  const id = `fw ${j.fw} · proto ${j.proto} · ${j.mode} · psram ${(j.psram/1048576)|0}MB · sd ${j.sd ? "yes" : "—"}`;
+  $("devId").textContent = id;
+  $("devId").classList.add("show");
+  $("alsChip").textContent = j.als ? "present" : "MISSING";
+  $("alsChip").classList.toggle("hot", !!j.als);
+  $("imuChip").textContent = j.imu ? "present" : "MISSING";
+  $("imuChip").classList.toggle("hot", !!j.imu);
+  $("imuCore").classList.add("armed");
+  if ($("hapChip").textContent === "—")
+    $("hapChip").textContent = j.haptic ? "present" : "MISSING";
+  if (typeof j.lux === "number") pushLux(j.lux);
+  if (!brightDragging) setBrightUI(j.bright);
+  $("autodimToggle").checked = !!j.autodim;
+}
+
+function pushLux(v) {
+  luxData.push(v);
+  if (luxData.length > 120) luxData.shift();
+  luxMin = Math.min(luxMin, v); luxMax = Math.max(luxMax, v);
+  animateNumber($("luxVal"), v);
+  $("luxMin").textContent = "min " + luxMin.toFixed(1);
+  $("luxMax").textContent = "max " + luxMax.toFixed(1);
+  drawLux();
+}
+
+/* animated numeric readout — eases toward the new value */
+const numState = new WeakMap();
+function animateNumber(el, target) {
+  let st = numState.get(el);
+  if (!st) { st = { cur: target, raf: 0 }; numState.set(el, st); }
+  st.target = target;
+  cancelAnimationFrame(st.raf);
+  const step = () => {
+    st.cur += (st.target - st.cur) * 0.18;
+    if (Math.abs(st.target - st.cur) < 0.05) st.cur = st.target;
+    el.textContent = st.cur >= 100 ? st.cur.toFixed(0) : st.cur.toFixed(1);
+    if (st.cur !== st.target) st.raf = requestAnimationFrame(step);
+  };
+  st.raf = requestAnimationFrame(step);
+}
+
+function drawLux() {
+  const c = $("luxChart"), ctx = c.getContext("2d");
+  const W = c.width = c.clientWidth * devicePixelRatio;
+  const H = c.height = c.clientHeight * devicePixelRatio;
+  ctx.clearRect(0, 0, W, H);
+  if (luxData.length < 2) return;
+  const lo = Math.min(...luxData), hi = Math.max(...luxData);
+  const pad = Math.max((hi - lo) * 0.15, 0.5);
+  const y = v => H - ((v - lo + pad) / (hi - lo + pad * 2)) * H;
+  const x = i => (i / (luxData.length - 1)) * W;
+  // faint grid
+  ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1;
+  for (let g = 1; g < 4; g++) { ctx.beginPath(); ctx.moveTo(0, H*g/4); ctx.lineTo(W, H*g/4); ctx.stroke(); }
+  // trace + glow fill
+  ctx.beginPath();
+  luxData.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+  ctx.strokeStyle = "#3ddc84"; ctx.lineWidth = 2 * devicePixelRatio; ctx.stroke();
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "rgba(61,220,132,0.22)"); grad.addColorStop(1, "rgba(61,220,132,0)");
+  ctx.fillStyle = grad; ctx.fill();
+}
+
+/* ── IMU pickup ──────────────────────────────────────────────── */
+let ringFlip = false;
+function onPickup() {
+  pickupCount++;
+  $("imuCount").textContent = pickupCount;
+  $("imuMsg").innerHTML = "Pickup detected · " + new Date().toLocaleTimeString();
+  const core = $("imuCore");
+  core.classList.add("fired");
+  setTimeout(() => core.classList.remove("fired"), 700);
+  const ring = $(ringFlip ? "ring1" : "ring2"); ringFlip = !ringFlip;
+  ring.classList.remove("go"); void ring.offsetWidth; ring.classList.add("go");
+}
+
+/* ── Keys ────────────────────────────────────────────────────── */
+const keyTiles = [];
+for (let i = 0; i < 6; i++) {
+  const t = document.createElement("div");
+  t.className = "key-tile";
+  t.innerHTML = `<span class="kn">KEY ${i + 1}</span><span class="taps"></span>`;
+  $("keyGrid").appendChild(t);
+  keyTiles.push({ el: t, presses: 0 });
+}
+function onKey(j) {
+  const k = keyTiles[j.index]; if (!k) return;
+  if (j.action === "press") {
+    k.presses++;
+    k.el.querySelector(".taps").textContent = k.presses + (j.taps > 1 ? ` (×${j.taps})` : "");
+    k.el.classList.add("down");
+  } else {
+    k.el.classList.remove("down");
+  }
+}
+
+/* ── Backlight ───────────────────────────────────────────────── */
+let brightDragging = false;
+function setBrightUI(v) {
+  if (typeof v !== "number") return;
+  $("brightSlider").value = v;
+  $("brightVal").textContent = v;
+}
+$("brightSlider").addEventListener("pointerdown", () => brightDragging = true);
+$("brightSlider").addEventListener("input", e => $("brightVal").textContent = e.target.value);
+$("brightSlider").addEventListener("change", e => {
+  brightDragging = false;
+  send("SET_BRIGHT " + e.target.value);
+  $("autodimToggle").checked = false;
+});
+$("autodimToggle").addEventListener("change", e => send("AUTODIM " + (e.target.checked ? 1 : 0)));
+
+/* ── Actuators ───────────────────────────────────────────────── */
+document.querySelectorAll(".beep-presets button[data-f]").forEach(b =>
+  b.addEventListener("click", () => send(`BEEP ${b.dataset.f} ${b.dataset.ms}`)));
+$("beepFreq").addEventListener("input", e => $("beepFreqVal").textContent = e.target.value);
+$("beepBtn").addEventListener("click", () => send(`BEEP ${$("beepFreq").value} 150`));
+$("beepSweep").addEventListener("click", async () => {
+  for (const f of [400, 700, 1200, 2000, 3200, 5000]) {
+    send(`BEEP ${f} 90`);
+    await new Promise(r => setTimeout(r, 140));
+  }
+});
+$("hapticBtn").addEventListener("click", () => {
+  send("HAPTIC");
+  const b = $("hapticBtn");
+  b.classList.remove("buzz"); void b.offsetWidth; b.classList.add("buzz");
+});
+
+/* ── LED board mimic ─────────────────────────────────────────── */
+/* physical layout: D1/3/5 left edge, D2/4/6 right edge, D7/D8 rear (top) */
+const LED_POS = [
+  { i: 0, x: 4,   y: 52,  lx: 24,  ly: 55 },   // D1 left top
+  { i: 1, x: 102, y: 52,  lx: 82,  ly: 55 },   // D2 right top
+  { i: 2, x: 4,   y: 104, lx: 24,  ly: 107 },  // D3 left mid
+  { i: 3, x: 102, y: 104, lx: 82,  ly: 107 },  // D4 right mid
+  { i: 4, x: 4,   y: 156, lx: 24,  ly: 159 },  // D5 left bottom
+  { i: 5, x: 102, y: 156, lx: 82,  ly: 159 },  // D6 right bottom
+  { i: 6, x: 32,  y: 6,   lx: 33,  ly: 26 },   // D7 rear
+  { i: 7, x: 74,  y: 6,   lx: 75,  ly: 26 },   // D8 rear
+];
+const ledEls = [];
+LED_POS.forEach(p => {
+  const d = document.createElement("div");
+  d.className = "led";
+  d.style.left = p.x + "px"; d.style.top = p.y + "px";
+  d.title = "D" + (p.i + 1);
+  d.addEventListener("click", () => paintLed(p.i));
+  $("ledBoard").appendChild(d);
+  const l = document.createElement("span");
+  l.className = "led-label"; l.textContent = "D" + (p.i + 1);
+  l.style.left = p.lx + "px"; l.style.top = p.ly + "px";
+  $("ledBoard").appendChild(l);
+  ledEls.push(d);
+});
+function hexRgb(hex) {
+  return [1, 3, 5].map(o => parseInt(hex.slice(o, o + 2), 16));
+}
+function showLed(i, r, g, b) {
+  const on = r || g || b;
+  ledEls[i].style.background = on ? `rgb(${r},${g},${b})` : "#20262d";
+  ledEls[i].style.boxShadow = on ? `0 0 12px rgba(${r},${g},${b},0.8)` : "none";
+}
+function paintLed(i) {
+  const [r, g, b] = hexRgb($("ledColor").value);
+  send(`SET_LED {"index":${i},"r":${r},"g":${g},"b":${b}}`);
+  showLed(i, r, g, b);
+}
+$("ledAll").addEventListener("click", () => {
+  const [r, g, b] = hexRgb($("ledColor").value);
+  send(`SET_LED {"index":-1,"r":${r},"g":${g},"b":${b}}`);
+  ledEls.forEach((_, i) => showLed(i, r, g, b));
+});
+$("ledChase").addEventListener("click", async () => {
+  const [r, g, b] = hexRgb($("ledColor").value);
+  for (let i = 0; i < 8; i++) {
+    send(`SET_LED {"index":${i},"r":${r},"g":${g},"b":${b}}`);
+    showLed(i, r, g, b);
+    await new Promise(rz => setTimeout(rz, 110));
+  }
+  await new Promise(rz => setTimeout(rz, 350));
+  send("LED_CLEAR");
+  ledEls.forEach((_, i) => showLed(i, 0, 0, 0));
+});
+$("ledClear").addEventListener("click", () => {
+  send("LED_CLEAR");
+  ledEls.forEach((_, i) => showLed(i, 0, 0, 0));
+});
+
+/* ── System / selftest ───────────────────────────────────────── */
+$("selftestBtn").addEventListener("click", () => {
+  selftestPending = true;
+  $("stList").innerHTML = "";
+  send("SELFTEST");
+});
+function onSelftest(j) {
+  if (!selftestPending) return;
+  selftestPending = false;
+  const items = [
+    ["Display panels", j.panels === 6, `${j.panels}/6 init`],
+    ["IMU LSM6DS3", j.imu, j.imu ? "answers on I2C" : "no response"],
+    ["Light sensor", j.als, j.als ? j.lux.toFixed(1) + " lux" : "no response"],
+    ["Haptic DRV2605L", j.haptic, j.haptic ? "answers on I2C" : "no response"],
+    ["PSRAM", j.psram > 0, ((j.psram/1048576)|0) + " MB"],
+    ["microSD", j.sd, j.sd ? "mounted" : "no card"],
+    ["Piezo + LEDs", true, "fired — did you hear/see them?"],
+  ];
+  items.forEach(([name, ok, detail], idx) => {
+    const d = document.createElement("div");
+    d.className = "st-item " + (ok ? "pass" : "fail");
+    d.style.animationDelay = (idx * 70) + "ms";
+    d.innerHTML = `<span class="mark">${ok ? "✓" : "✗"}</span><span>${name}</span>
+                   <span style="margin-left:auto;color:var(--faint)">${detail}</span>`;
+    $("stList").appendChild(d);
+    requestAnimationFrame(() => d.classList.add("in"));
+  });
+}
+$("sdBtn").addEventListener("click", () => send("SD_INFO"));
+function onSdInfo(j) {
+  logLine("ev", j.mounted === false
+    ? "SD: not mounted (no card?)"
+    : `SD: ${j.size_mb} MB total, ${j.used_mb} MB used`);
+  openConsole(true);
+}
+$("reinitBtn").addEventListener("click", () => send("REINIT"));
+
+/* ── Console ─────────────────────────────────────────────────── */
+function logLine(kind, text) {
+  const el = document.createElement("div");
+  el.className = kind;
+  el.textContent = (kind === "tx" ? "→ " : "") + text;
+  const log = $("log");
+  log.appendChild(el);
+  while (log.childElementCount > 400) log.firstChild.remove();
+  log.scrollTop = log.scrollHeight;
+  $("lastLine").textContent = text;
+}
+function openConsole(open) { $("consoleWrap").classList.toggle("open", open); }
+$("consoleBar").addEventListener("click", () =>
+  $("consoleWrap").classList.toggle("open"));
+$("cmdSend").addEventListener("click", sendCmdInput);
+$("cmdInput").addEventListener("keydown", e => e.key === "Enter" && sendCmdInput());
+function sendCmdInput() {
+  const v = $("cmdInput").value.trim();
+  if (v) { send(v); $("cmdInput").value = ""; }
+}
+
+/* ── Boot ────────────────────────────────────────────────────── */
+$("connectBtn").addEventListener("click", () => port ? disconnect(true) : connect());
+if (!("serial" in navigator)) {
+  $("connectBtn").disabled = true;
+  $("unsupported").style.display = "block";
+}
+window.addEventListener("resize", drawLux);
+</script>
+</body>
+</html>
