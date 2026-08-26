@@ -6,7 +6,7 @@
 #   ./scripts/build_firmware.sh            # compile + bundle
 #   ./scripts/build_firmware.sh --flash    # …then flash a connected deck
 #
-# Requires arduino-cli with the esp32 core and the Adafruit ST7735/GFX
+# Requires arduino-cli with the esp32 core and Adafruit ST7735/GFX/NeoPixel
 # libraries installed (see docs/firmware/flashing.md).
 
 set -euo pipefail

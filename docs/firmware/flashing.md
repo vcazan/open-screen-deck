@@ -3,11 +3,15 @@
 The carrier PCB does not come with firmware pre-loaded. Flash once after
 assembly over the on-board USB-C port.
 
+GitHub Releases include `firmware-<version>.bin` plus bootloader and
+partition images — same files the companion bundles. The companion is
+usually easier: Settings → Firmware.
+
 !!! tip "Companion app"
     After the first flash, [the app](../app/index.md) can put the board in
     bootloader mode and write the bundled firmware (Settings → Firmware).
-    The Arduino steps below are for a blank board or if you're changing
-    the sketch yourself.
+    Arduino / `esptool` below are for a blank board, a machine without
+    the app, or if you're changing the sketch.
 
 ## Requirements
 

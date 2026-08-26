@@ -1,5 +1,9 @@
 name: Release companion app
 
+# Pushing a tag like app-v0.2.0 builds macOS + Windows installers,
+# compiles firmware, attaches the .bins, and publishes the GitHub Release.
+# Pushing main does not create a release.
+
 on:
   push:
     tags:
@@ -7,7 +11,55 @@ on:
   workflow_dispatch:
 
 jobs:
+  firmware:
+    name: Compile firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Cache ESP32 core
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15
+            ~/Arduino/libraries
+          key: arduino-esp32-${{ hashFiles('firmware/**') }}
+          restore-keys: arduino-esp32-
+
+      - name: Install ESP32 core and libraries
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "Adafruit GFX Library" "Adafruit ST7735 and ST7789 Library" "Adafruit NeoPixel"
+
+      - name: Compile
+        run: |
+          arduino-cli compile \
+            -b "esp32:esp32:esp32s3:USBMode=default,CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi" \
+            --output-dir /tmp/fw-out \
+            firmware
+
+      - name: Stage release files
+        run: |
+          VERSION=$(sed -n 's/#define FIRMWARE_VERSION "\(.*\)"/\1/p' firmware/config.h)
+          mkdir -p dist-fw
+          cp /tmp/fw-out/firmware.ino.bin dist-fw/firmware-${VERSION}.bin
+          cp /tmp/fw-out/firmware.ino.bootloader.bin dist-fw/firmware-${VERSION}.bootloader.bin
+          cp /tmp/fw-out/firmware.ino.partitions.bin dist-fw/firmware-${VERSION}.partitions.bin
+          printf '%s\n' "$VERSION" > dist-fw/VERSION.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-release
+          path: dist-fw/
+
   build:
+    name: Companion (${{ matrix.platform }})
     permissions:
       contents: write
     strategy:
@@ -45,23 +97,57 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # NOTE: unset secrets become empty-string env vars, which the
-          # bundler treats as "signing enabled" and then fails. Only export
-          # signing vars when the secret actually exists.
-          #
-          # macOS signing + notarization — uncomment once the certs are in
-          # repo secrets:
-          #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
-          #   APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
-          # Windows Authenticode:
-          #   WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD
-          # Auto-update artifact signing (tauri signer generate):
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: app
           tagName: ${{ github.ref_name }}
-          releaseName: 'Companion ${{ github.ref_name }}'
+          releaseName: 'Open Screen Deck ${{ github.ref_name }}'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  attach-firmware:
+    name: Attach firmware and publish
+    needs: [firmware, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-release
+          path: fw
+
+      - name: Upload bins and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          FW=$(tr -d '[:space:]' < fw/VERSION.txt)
+          gh release upload "$TAG" \
+            "fw/firmware-${FW}.bin" \
+            "fw/firmware-${FW}.bootloader.bin" \
+            "fw/firmware-${FW}.partitions.bin" \
+            --repo "${{ github.repository }}" --clobber
+          {
+            echo "Companion ${TAG} with firmware ${FW} bundled in the app and attached as .bin files."
+            echo
+            echo "## Companion"
+            echo "macOS: .dmg (universal). Unsigned: right-click → Open the first time."
+            echo "Windows: .msi or the setup .exe."
+            echo
+            echo "Settings → Firmware flashes this image over USB. On Rev E, Settings → Deck hardware drives auto-dim, glow LEDs, and a self-test."
+            echo
+            echo "## Firmware ${FW}"
+            echo "Flash with the companion, or esptool using the three files on this release:"
+            echo "- firmware-${FW}.bin — application"
+            echo "- firmware-${FW}.bootloader.bin"
+            echo "- firmware-${FW}.partitions.bin"
+            echo
+            echo "Or compile firmware/ in the Arduino IDE."
+            echo
+            echo "Docs: https://vcazan.github.io/open-screen-deck/"
+          } > notes.md
+          gh release edit "$TAG" --draft=false --repo "${{ github.repository }}" --notes-file notes.md

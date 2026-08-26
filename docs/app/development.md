@@ -48,8 +48,10 @@ npm run test:e2e     # UI + protocol against the simulator (Playwright)
 
 ## Releases
 
-Tag `app-v*` (e.g. `app-v0.1.0`) to trigger `.github/workflows/release.yml`:
-universal macOS + Windows bundles, uploaded to a draft GitHub Release.
+Tag `app-v*` (e.g. `app-v0.2.0`) to trigger `.github/workflows/release.yml`:
+universal macOS + Windows bundles **and** firmware `.bin` files, published
+as a GitHub Release. Pushing `main` only updates the repo and docs site —
+it does not cut a release.
 Signing/notarization activates when these repo secrets are set:
 
 | Secret | Purpose |

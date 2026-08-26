@@ -1,6 +1,6 @@
 [package]
 name = "open-screen-deck"
-version = "0.1.0"
+version = "0.2.0"
 description = "Companion app for the Open Screen Deck macro pad"
 authors = ["Open Screen Deck contributors"]
 license = "MIT"
