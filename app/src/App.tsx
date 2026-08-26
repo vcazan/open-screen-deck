@@ -754,45 +754,53 @@ export default function App() {
   // double/triple actions. HID-mappable actions get their real code (works
   // standalone); host-only actions get the silent TAP_ARM sentinel so the
   // firmware waits and reports taps. Unbound = 0 = zero-latency singles.
-  const tapArmSigRef = useRef('');
   const connectSyncDoneRef = useRef(false);
   useEffect(() => {
     if (!connected) {
       connectSyncDoneRef.current = false;
+      return;
     }
-  }, [connected]);
+    // Simulator has no GET_KEYS wait — arm h2/h3 immediately. USB waits for
+    // the profile-sync effect to flip this after the keys mirror fills.
+    if (device.transportMode !== 'webserial') {
+      connectSyncDoneRef.current = true;
+    }
+  }, [connected, device.transportMode]);
 
   useEffect(() => {
+    if (!connected) return;
+
     const arm = () => {
-      if (!connectSyncDoneRef.current) return;
+      const mode = deviceRef.current.transportMode;
+      if (mode === 'webserial' && !connectSyncDoneRef.current) return;
       const wanted = Array.from({ length: TOTAL_KEYS }, (_, i) => ({
         h2: actionToTapHid(keyActions.double[i]),
         h3: actionToTapHid(keyActions.triple[i]),
       }));
-      const state = device.device?.getState();
+      const d = deviceRef.current;
+      const state = d.device?.getState();
       wanted.forEach(({ h2, h3 }, i) => {
         const k = state?.keys[i];
         if ((k?.hid2 ?? 0) === h2 && (k?.hid3 ?? 0) === h3) return;
-        device.sendCommand(
+        d.sendCommand(
           encodeCommand({
             type: 'SET_KEY',
             payload: { index: i, h2, h3, draw: 0 },
           }),
         );
       });
-      return JSON.stringify(wanted);
     };
 
-    const sig = `${connected}:${JSON.stringify([keyActions.double, keyActions.triple])}`;
-    if (tapArmSigRef.current === sig) return;
-    tapArmSigRef.current = sig;
-
-    if (!connected) return;
-    // On a fresh USB connect, wait for GET_KEYS to fill the mirror before
-    // diffing — otherwise we'd arm against stale state.
-    const timer = setTimeout(arm, device.transportMode === 'webserial' ? 1500 : 0);
+    // Simulator: arm in this tick so Test-mode presses see hid2 before the
+    // next click (a setTimeout(0) is cancelled by Strict Mode remount).
+    // USB: wait for GET_KEYS / profile-sync before diffing.
+    if (device.transportMode !== 'webserial') {
+      arm();
+      return;
+    }
+    const timer = setTimeout(arm, 1500);
     return () => clearTimeout(timer);
-  }, [keyActions.double, keyActions.triple, device, connected]);
+  }, [keyActions.double, keyActions.triple, connected, device.transportMode]);
 
   // USB reconnect: re-push the active profile so plugin faces paint and
   // host-side actions stay bound — one synchronized DRAW_ALL at the end.
@@ -836,7 +844,6 @@ export default function App() {
       state && deviceProfileKeysMatch(state.keys, stored.data);
 
     keyActions.setAll(actions, multi.double, multi.triple);
-    tapArmSigRef.current = `${connected}:${JSON.stringify([multi.double, multi.triple])}`;
 
     void (async () => {
       if (match) {
@@ -860,7 +867,6 @@ export default function App() {
         device.logLocal(`profile: synced “${stored.name}” to hardware`);
       }
       connectSyncDoneRef.current = true;
-      tapArmSigRef.current = `${connected}:${JSON.stringify([multi.double, multi.triple])}`;
     })();
   }, [
     connected,
