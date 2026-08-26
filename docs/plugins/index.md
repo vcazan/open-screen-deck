@@ -1,11 +1,11 @@
 # Plugin Directory
 
-Everything below is loaded live from the
-[plugin registry](https://github.com/vcazan/open-screen-deck/blob/main/plugins/registry.json)
-— the same index the app's **Plugins → Store** installs from. Install any
-of these with one click inside the companion app.
+Loaded from
+[`plugins/registry.json`](https://github.com/vcazan/open-screen-deck/blob/main/plugins/registry.json)
+in this repo — the same file the companion reads under **Plugins → Store**.
 
-Want to add yours? See the [developer center](develop.md).
+To add one: [developer center](develop.md), then a PR with a folder and a
+registry line.
 
 <div id="plugin-directory" class="plugin-directory">
   <p class="plugin-directory-status">Loading the registry…</p>

@@ -29,9 +29,8 @@ keys, not ScreenKey modules.
 |--|------------------|----------------|
 | Display | 6× 128×128 IPS (one per key) | Single touchscreen, one TFT, or small OLED |
 | Keys | Waveshare ScreenKey (LCD + switch module) | Separate switch + display, or touch-only |
-| PCB / case | 55×112 mm carrier + OpenSCAD enclosure | Varies |
+| PCB / case | 59.5 × 108.5 mm carrier + OpenSCAD enclosure | Varies |
 | Host link | USB HID + CDC serial | Varies (web UI, BLE, etc.) |
 
-This repo documents a 2×3 ScreenKey deck: carrier PCB, enclosure, and
-firmware together. Waveshare's own ScreenKey tooling targets single modules
-and is not part of this project.
+This repo is a 2×3 ScreenKey deck: carrier, case, and firmware in one
+place. Waveshare's own apps target a single module and aren't used here.

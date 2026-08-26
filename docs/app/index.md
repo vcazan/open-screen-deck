@@ -1,13 +1,13 @@
 # Companion App
 
-The desktop companion turns the deck from a HID macro pad into a Stream
-Deck-class controller — and the deck still works standalone when the app
-isn't running.
+Optional desktop tool for drawing key faces, assigning host actions, and
+flashing firmware. Without it the deck is still a USB keyboard (F13–F24
+by default, plus whatever you last saved on the device).
 
 ![Deck view](../images/app/deck.png){ .app-shot }
 
-Download from [GitHub Releases](https://github.com/vcazan/open-screen-deck/releases),
-or [build it yourself](development.md) (Tauri 2 — Rust backend, React front).
+Binaries are on [GitHub Releases](https://github.com/vcazan/open-screen-deck/releases).
+To run from source: [app development](development.md) (`app/`, Tauri 2).
 
 ## How it works
 
@@ -18,9 +18,8 @@ key faces ◀──SET_KEY / SET_FACE / SET_IMAGE── state engine + plugins �
 
 On connect the companion sends `MODE COMPANION`; the firmware stops typing
 F13–F24 itself and just reports key events. A `PING` every 2 s is the
-heartbeat — if the companion dies or the cable is pulled, the firmware
-reverts to plain HID within 6 s. **The deck always works, with or without
-software.**
+heartbeat — if the app quits or the cable is pulled, the firmware falls
+back to plain HID within 6 s.
 
 ## Configuring keys
 
@@ -29,8 +28,8 @@ what the key does.
 
 ![Key inspector](../images/app/inspector.png){ .app-shot }
 
-Choosing an action is a visual gallery — every option is a card with an
-icon and a one-liner, grouped by where it runs. Search filters live.
+Choosing an action is a gallery of cards grouped by where they run
+(device vs host). Type to filter.
 
 ![Action picker](../images/app/action-picker.png){ .app-shot }
 
@@ -82,42 +81,36 @@ media. The **active** profile auto-saves as you edit. Profiles export as
 self-contained `.osdprofile.json` files (**Share** on any card); community
 layouts live in the repo's
 [`profiles/`](https://github.com/vcazan/open-screen-deck/tree/main/profiles)
-folder. Ready-made **templates** (including a four-page Plugin Showcase)
-apply with one click:
+folder. Starter templates (including a plugin showcase) are in the app:
 
 ![Profiles view](../images/app/profiles.png){ .app-shot }
 
-Profiles can also **auto-activate per app** — switch to OBS and your
-streaming profile loads itself.
+A profile can load when a given app comes to the front (e.g. OBS).
 
 ## Editing niceties
 
-- **Drag & drop** — drag one key onto another to swap their full identity
+- **Drag & drop** — drag one key onto another to swap them
 - **Copy/paste** — ++cmd+c++ / ++cmd+v++ on a selected key
 - **Undo/redo** — ++cmd+z++ / ++shift+cmd+z++, up to 50 steps
-- **Test mode** — flip the deck into Test and click keys to fire their
-  real actions
+- **Test mode** — click keys in the UI to fire the real actions
 
 ## Plugins
 
-The **Plugins** page is a full store: browse the
-[plugin directory](../plugins/index.md), install with one click, and click
-any plugin for its detail page — live face previews, customization
-defaults, settings (like the OBS connection), and the full changelog.
-When a plugin ships an update, the app asks first and shows the release
-notes:
+**Plugins** lists what's in `plugins/registry.json`. Install from there,
+open a plugin for its settings and changelog, and you'll be asked before
+an update applies.
 
 ![Update prompt](../images/app/update-prompt.png){ .app-shot }
 
-Want to build one? Head to the [developer center](../plugins/develop.md) —
-scaffold to working plugin in under a minute.
+To write one, [developer center](../plugins/develop.md) — **Plugins →
+Developer → Create** drops a working folder on disk.
 
 ## Firmware updates
 
-Settings → Firmware shows the version on the deck vs. the version bundled
-with the app. One click reboots the deck into its ROM bootloader, flashes
-over USB (~30 s) with a live progress overlay, and restarts it. No Arduino
-IDE, no esptool. A recovery option un-sticks decks left in bootloader mode.
+Settings → Firmware compares the deck to the binary bundled with the app
+and can reboot into the ROM bootloader, flash over USB (~30 s), and come
+back. Recovery un-sticks a board left in download mode. You can still
+flash from Arduino; this is just the same image from the app.
 
 ## Deck hardware (Rev E)
 

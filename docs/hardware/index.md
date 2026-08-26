@@ -1,10 +1,11 @@
 # Hardware Overview
 
-Open Screen Deck is a 6-key macro pad where every key is a self-contained
-128×128 LCD module on a custom ESP32-S3 carrier PCB, in a 3D-printed case.
+A 2×3 of Waveshare ScreenKey modules (128×128 LCD + switch each) on an
+ESP32-S3 carrier, in a printed case. You fabricate the board, print the
+shells, and screw the modules on — sources are in `hardware/`.
 
-**Rev E** is the current board: dual SPI, on-board IMU + ambient light +
-haptics, eight edge-glow LEDs, and a Qwiic port.
+**Rev E** is the current layout: dual SPI to the panels, IMU, ambient
+light, haptics, eight edge-glow LEDs, and a Qwiic port.
 
 ![Rev E carrier](../images/pcb-rev-e-top.png)
 

@@ -1,7 +1,8 @@
 # Parts List
 
-Complete shopping list for building one Open Screen Deck. Source CSV:
-[`hardware/bom_assembly.csv`](https://github.com/vcazan/open-screen-deck/blob/main/hardware/bom_assembly.csv)
+What to buy and print for one deck. Same data as
+[`hardware/bom_assembly.csv`](https://github.com/vcazan/open-screen-deck/blob/main/hardware/bom_assembly.csv).
+Order the six modules first; print and fab while they ship.
 
 ## Bill of materials
 

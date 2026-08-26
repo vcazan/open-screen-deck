@@ -1,7 +1,8 @@
 # Build It
 
-From parts order to a working deck on your desk. Total cost ~**$100**,
-total hands-on time about **an hour** once everything arrives.
+This is the path from an empty desk to a working deck. Order the
+modules first. Print and fab while they ship. Hands-on assembly is about
+an hour once the parts are in.
 
 <div class="grid cards" markdown>
 
@@ -9,8 +10,8 @@ total hands-on time about **an hour** once everything arrives.
 
     ---
 
-    Six ScreenKey modules, the PCB, fasteners, and feet — the modules
-    have the longest lead time, so order them first.
+    Six ScreenKey modules (longest lead time), a Rev E PCB from the
+    Gerbers, M2 screws, inserts, rubber feet.
 
     [:octicons-arrow-right-24: Parts list](../getting-started/parts.md)
 
@@ -18,8 +19,8 @@ total hands-on time about **an hour** once everything arrives.
 
     ---
 
-    Four STLs, no supports, PETG or PLA+. Print while you wait for the
-    parts to ship.
+    Four STLs, no supports, PETG or PLA+. Start these as soon as you
+    place the PCB order.
 
     [:octicons-arrow-right-24: 3D printing](../getting-started/printing.md)
 
@@ -27,21 +28,22 @@ total hands-on time about **an hour** once everything arrives.
 
     ---
 
-    Eight illustrated steps, ~45 minutes: inserts, modules, cables,
-    and four corner screws.
+    Heat-set inserts, screw modules to the carrier, plug the in-box
+    cables, four corner screws.
 
     [:octicons-arrow-right-24: Assembly guide](assembly.md)
 
--   :material-flash:{ .lg .middle } __4 · Flash & go__
+-   :material-flash:{ .lg .middle } __4 · Flash__
 
     ---
 
-    Flash the firmware once over USB-C, then let the
-    [companion app](../app/index.md) handle updates.
+    USB-C into the board. Arduino IDE or the companion app. After this
+    it shows up as a keyboard.
 
     [:octicons-arrow-right-24: Flashing](../firmware/flashing.md)
 
 </div>
 
-Ordering your own PCB run? The [fab checklist](fab-checklist.md) covers
-pre-order verification and board bring-up.
+Sending your own Gerbers to JLCPCB? Walk through the
+[fab checklist](fab-checklist.md) before you upload, then again at
+bring-up.

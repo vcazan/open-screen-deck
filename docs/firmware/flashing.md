@@ -3,12 +3,11 @@
 The carrier PCB does not come with firmware pre-loaded. Flash once after
 assembly over the on-board USB-C port.
 
-!!! tip "The easy way: let the app do it"
-    The [companion app](../app/index.md) bundles the current firmware and
-    flashes it in one click (Settings → Firmware) — bootloader entry,
-    flashing, and reboot handled for you, updates included. The steps
-    below are only needed for the *first* flash of a factory-fresh board,
-    or if you're hacking on the firmware itself.
+!!! tip "Companion app"
+    After the first flash, [the app](../app/index.md) can put the board in
+    bootloader mode and write the bundled firmware (Settings → Firmware).
+    The Arduino steps below are for a blank board or if you're changing
+    the sketch yourself.
 
 ## Requirements
 
